@@ -18,8 +18,6 @@ OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 client = openai.OpenAI(api_key=OPENAI_API_KEY)
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
 # =========================================================
 # 2) FUNÇÃO PARA MONTAR O HTML DO ORÇAMENTO (DESIGN A4)
@@ -291,8 +289,12 @@ else:
                     "unidades": f['unidades']
                 }).execute()
             
+            # --- ALTERAÇÃO DA URL ABAIXO ---
+            url_profix = "https://SUA-URL-AQUI.streamlit.app" # <--- ALTERE AQUI PARA O SEU LINK REAL
+            
             st.success("✅ Orçamento salvo com sucesso!")
-            st.code(f"Link: http://localhost:8501/?id={oid}")
+            st.code(f"Link: {url_profix}/?id={oid}")
+            
         except Exception as e:
             st.error(f"Erro ao salvar: {e}")
 
