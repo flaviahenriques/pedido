@@ -12,9 +12,9 @@ import base64
 st.set_page_config(page_title="PROFIX - Gerador de Orçamentos", layout="wide")
 
 # Conexões seguras usando st.secrets
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 client = openai.OpenAI(api_key=OPENAI_API_KEY)
