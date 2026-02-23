@@ -6,7 +6,7 @@ from supabase import create_client
 import base64
 
 # #########################################################
-# 1) CONFIGURAÇÕES DE CONEXÃO E PÁGINA
+# 1) CONFIGURAÇÕES DE PÁGINA E CONEXÕES
 # #########################################################
 st.set_page_config(page_title="PROFIX - Gerador de Orçamentos", layout="wide")
 
@@ -62,13 +62,14 @@ def montar_layout_proposta(orc_id, r_social, cnpj_val, empreend, local, cuidados
 <style>
     body {{ background: transparent; margin: 0; padding: 0; font-family: Arial, sans-serif; }}
     .folha-documento {{
-        background-color: white; max-width: 800px; margin: 0 auto; padding: 30px; color: black; box-sizing: border-box;
+        background-color: white; max-width: 800px; margin: 0 auto; padding: 40px; color: black; box-sizing: border-box;
     }}
     .titulo-barra {{ background-color: #002d5b; color: white; text-align: center; padding: 12px; font-weight: bold; margin: 20px 0; }}
     .texto-escopo {{ margin: 10px 0 25px 0; text-align: justify; font-size: 13px; white-space: pre-wrap; word-wrap: break-word; }}
+    
     @media print {{
-        body {{ background: white; }}
-        .folha-documento {{ max-width: 100%; width: 100%; padding: 0; margin: 0; }}
+        body {{ background: white !important; }}
+        .folha-documento {{ max-width: 100%; width: 100%; padding: 0; margin: 0; box-shadow: none; }}
         .titulo-barra {{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
         @page {{ size: A4; margin: 15mm; }}
     }}
@@ -128,7 +129,7 @@ if "fotos" not in st.session_state: st.session_state.fotos = []
 if "pagina" not in st.session_state: st.session_state.pagina = "Criar Novo"
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 
-# Visualização externa (Link do Cliente) - REMOVIDO BOTÃO DUPLICADO
+# Visualização externa (Link do Cliente)
 params = st.query_params
 if "id" in params:
     doc_id = params["id"]
@@ -137,8 +138,6 @@ if "id" in params:
         it_db = supabase.table("itens_orcamento").select("*").eq("orcamento_id", doc_id).execute().data
         ft_db = supabase.table("fotos_relatorio").select("*").eq("orcamento_id", doc_id).execute().data
         html_view = montar_layout_proposta(doc_id, d['cliente_razao_social'], d['cliente_cnpj'], d['empreendimento'], d['localizacao'], d['aos_cuidados'], d['metodologia_escopo'], it_db, ft_db, float(d['valor_total']))
-        
-        # Apenas o documento e o comando de impressão via JS (sem botão visual no topo)
         st.components.v1.html(f"{html_view}<script>window.print();</script>", height=2000, scrolling=True)
         st.stop()
     except: st.error("Orçamento não encontrado.")
@@ -260,27 +259,36 @@ else:
                     url = supabase.storage.from_("fotos_orcamentos").get_public_url(f_path)
                 supabase.table("fotos_relatorio").insert({"orcamento_id": oid, "nome_item": f['nome'], "url_foto": url, "unidades": f['unidades']}).execute()
             
-            st.success("✅ Orçamento salvo com sucesso!")
+            st.success("✅ Orçamento salvo!")
             st.code(f"Link: https://pedido.streamlit.app/?id={oid}")
         except Exception as e:
             st.error(f"Erro ao salvar: {e}")
 
     # =========================================================
-    # PRÉ-VISUALIZAÇÃO COM BOTÃO ÚNICO
+    # ÁREA DE PRÉ-VISUALIZAÇÃO (BOTÃO OCULTO NO PDF)
     # =========================================================
     st.divider()
     st.subheader("👁️ Pré-visualização")
     html_final = montar_layout_proposta(None, razao, cnpj, emp, loc, ac, escopo, st.session_state.itens, st.session_state.fotos, total)
     
     st.components.v1.html(f"""
-        <div style="font-family: Arial, sans-serif;">
+        <style>
+            /* ESTA REGRA ESCONDE O BOTÃO E O FUNDO CINZA NA HORA DE IMPRIMIR */
+            @media print {{
+                .no-print {{ display: none !important; }}
+                .preview-container {{ border: none !important; background: white !important; padding: 0 !important; }}
+            }}
+        </style>
+        
+        <div class="no-print" style="margin-bottom: 20px;">
             <button onclick="window.print()" style="
                 width: 100%; background: #002d5b; color: white; padding: 18px; 
                 border: none; border-radius: 8px; cursor: pointer; font-weight: bold; 
-                font-size: 18px; margin-bottom: 20px;
+                font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
             ">🖨️ GERAR PDF / IMPRIMIR</button>
-            <div style="border: 1px solid #ddd; background: #f9f9f9; padding: 5px;">
-                {html_final}
-            </div>
         </div>
-    """, height=1000, scrolling=True)
+        
+        <div class="preview-container" style="border: 1px solid #ddd; background: #f9f9f9; padding: 10px;">
+            {html_final}
+        </div>
+    """, height=1200, scrolling=True)
