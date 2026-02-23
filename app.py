@@ -344,19 +344,22 @@ else:
     st.components.v1.html(prev, height=900, scrolling=True)
 
     # =========================================================
-    # BOTÃO DE PDF (ADICIONADO)
+    # BOTÃO DE PDF CORRIGIDO (DOWNLOAD DIRETO)
     # =========================================================
-    if st.button("📄 Gerar PDF para Download", use_container_width=True):
-        if not razao:
-            st.warning("Preencha a Razão Social para gerar o PDF.")
-        else:
-            try:
-                pdf_bytes = gerar_pdf_profix(razao, escopo, total, st.session_state.itens)
-                st.download_button(
-                    label="📥 Clique aqui para Baixar PDF",
-                    data=pdf_bytes,
-                    file_name=f"Orcamento_{razao.replace(' ', '_')}.pdf",
-                    mime="application/pdf"
-                )
-            except Exception as e:
-                st.error(f"Erro ao gerar PDF: {e}")
+    # Criamos o arquivo antes, para o botão de download já ter o dado pronto
+    if razao and st.session_state.itens:
+        try:
+            pdf_bytes = gerar_pdf_profix(razao, escopo, total, st.session_state.itens)
+            
+            st.download_button(
+                label="📥 BAIXAR ORÇAMENTO EM PDF",
+                data=pdf_bytes,
+                file_name=f"Orcamento_{razao.replace(' ', '_')}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                type="secondary" # Diferencia do botão de salvar
+            )
+        except Exception as e:
+            st.error(f"Erro ao preparar PDF: {e}")
+    else:
+        st.info("Preencha a Razão Social e adicione itens para habilitar o download do PDF.")
