@@ -43,10 +43,8 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
     while len(partes) < 4: partes.append("")
     s1, s2, s3, s4 = partes[0], partes[1], partes[2], partes[3]
 
-    # LOGICA DO NUMERO DO ORÇAMENTO (ANO-ID)
     num_exibicao = f"{ano_atual}-{str(id_orc).zfill(3)}" if id_orc else "PROVISÓRIO"
 
-    # Galeria de Fotos - PADRONIZADO COM O RESTO DO LAYOUT
     fotos_html = ""
     if lista_fotos:
         fotos_html += f'<b class="secao-titulo">4. RELATÓRIO FOTOGRÁFICO</b>'
@@ -118,7 +116,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
             <div style="margin-top:10px;">{itens_html}</div>
             
             <div style="margin-top:30px; display:flex; justify-content:space-between; align-items:flex-start;">
-                <div style="font-size:11px; color:#555; flex:1; padding-right: 20px;"><b>CONDIÇÕES COMERCIAIS</b><br>{s4}</div>
+                <div style="font-size:11px; color:#555; flex:1; padding-right: 20px;">{s4}</div>
                 <div style="background:#f1f4f9 !important; padding:20px; border-left:8px solid #002d5b; text-align:right; min-width:260px;">
                     <small style="color:#666;">VALOR TOTAL DO PROJETO</small><br>
                     <b style="font-size:26px; color:#002d5b;">R$ {valor_total:,.2f}</b>
@@ -179,11 +177,70 @@ else:
 
     with st.expander("2. Escopo Técnico", expanded=True):
         p_esc = esc_db.split("|||")
+        
+        # Carregamento automático para NOVO orçamento com o seu espaçamento
+        if not st.session_state.edit_id and (len(p_esc) < 2 or p_esc[0] == ""):
+            p_esc = [
+                """A PROFIX atuará com foco na preservação do padrão estético e na manutenção da integridade das instalações, assegurando que os apartamentos decorados e estandes de vendas mantenham-se em estado de 'novo' e prontos para visitação. Nossa metodologia prioriza a conservação detalhada para que o ambiente reflita fielmente a qualidade do projeto original, compreendendo:
+
+Gestão de Iluminação e Atmosfera (Elétrica): Manutenção contínua de todo o sistema de iluminação decorativa e funcional. Realizamos a substituição imediata de lâmpadas e fitas LED, respeitando rigorosamente a temperatura de cor (quente/fria) e a intensidade original do projeto de interiores, garantindo que o ambiente mantenha a atmosfera planejada pelos arquitetos. Cuidamos da funcionalidade e limpeza de tomadas e interruptores.
+
+Sistemas Hidráulicos e Escoamento: Monitoramento preventivo de todos os pontos de água, incluindo torneiras, misturadores, cubas e sistemas sanitários, eliminando gotejamentos ou irregularidades funcionais. Nossa atuação foca na estanqueidade total, prevenindo umidades que danifiquem o mobiliário. Inclui a limpeza técnica periódica de calhas e tubos de queda, garantindo o escoamento pluvial e protegendo o patrimônio contra infiltrações.
+
+Revitalização de Acabamentos e Revestimentos (Limites Mensais): Intervenções de restauro para correção visual imediata de avarias decorrentes do fluxo de visitação:
+• Pintura de Revitalização: Retoques em paredes e tetos (até 4m²);
+• Sistemas de Forro: Reparos em gesso acartonado (até 1m²) e placas moduladas (até 2m²);
+• Revestimentos e Calafetação: Revisão de rejuntamentos e cerâmicas (até 1m²), além da renovação de silicones;
+• Massa e Nivelamento: Recomposição de emboço ou massa (até 5m²);
+• Impermeabilização Pontual: Tratamento de áreas localizadas (até 2m²).
+
+Zelo com Marcenaria e Ferragens: Ajuste e preservação de itens de marcenaria e serralheria. Inclui lubrificação e regulagem de dobradiças e corrediças, aperto de puxadores e pequenos reparos de colagem.
+
+Zelo com Inox e Metais: Limpeza técnica e conservação estética de portas de elevadores e marcos metálicos, garantindo a remoção de marcas e a preservação do brilho original dos acabamentos.
+
+Este escopo não contempla: manutenção mecânica/eletrônica de ar-condicionado (apenas filtros e drenos), reposição de vidros/espelhos, manutenção mecânica de elevadores, reformas estruturais, limpeza de fachadas ou reparos em mobiliário solto/decoração.
+
+Objetivo: Manter a infraestrutura operacional e estética em nível de excelência, permitindo que o foco total do visitante esteja na qualidade e nos detalhes do imóvel.""",
+
+                """A PROFIX assume o fornecimento integral de todos os materiais de consumo e peças de reposição necessários para a execução dos serviços descritos nesta proposta. Nossa logística de suprimentos segue critérios rigorosos para garantir a integridade do projeto e a valorização do imóvel:
+
+Critério de Substituição e Fidelidade: Na manutenção de qualquer componente, seguiremos rigorosamente o padrão da peça já instalada no local. A prioridade será total para a mesma marca e referência do projeto original.
+
+Descontinuidade de Mercado: Somente em casos comprovados de descontinuidade, optaremos por uma marca similar de primeira linha (premium).
+
+Padrão de Pintura e Cores: A contratante deverá fornecer as referências e códigos das cores desejadas. Utilizaremos exclusivamente tintas de linha premium.
+
+Critério de Retoque e Pintura Geral: A proposta contempla o retoque pontual. Caso a superfície original não aceite o retoque e demande a pintura integral, a PROFIX enviará previamente uma proposta de valor complementar.
+
+Principais insumos cobertos: Componentes de iluminação LED (lâmpadas, fitas, reatores), dispositivos elétricos (tomadas, interruptores), vedações (silicones, rejuntes), hidráulica (reparos de válvulas, engates) e materiais de acabamento (tinta, massas, lixas, seladores).
+
+Logística: A gestão de compra e entrega dos insumos é de inteira responsabilidade da PROFIX, garantindo agilidade imediata nos reparos.""",
+
+                """Perfil da Equipe: Os serviços são executados por profissionais capacitados para atuar em ambientes de alto padrão. Priorizamos a organização e a limpeza absoluta do local após cada intervenção, preservando a integridade do mobiliário decorativo e a estética do projeto.
+
+Gestão por Relatórios Digitais: Após cada manutenção, será enviado um Relatório Fotográfico detalhado (antes e depois). Este documento garante o controle da construtora sobre a preservação do seu patrimônio e serve como histórico técnico das instalações.
+
+Respeito ao Fluxo de Vendas: As visitas e intervenções serão coordenadas com a administração do estande para não interferir nos horários de maior fluxo de clientes, mantendo o ambiente sempre pronto para recepção.
+
+Compromisso de Agilidade: A PROFIX estabelece o prazo máximo de 48 horas para o atendimento e resolução de chamados após a abertura da solicitação.""",
+
+                """<b>CONDIÇÕES COMERCIAIS</b><br>
+Vigência do Contrato: 12 (doze) meses, garantindo a manutenção contínua e a preservação do padrão estético do patrimônio durante o ciclo de exposição.
+
+Abrangência: O valor proposto contempla todos os custos diretos e indiretos, incluindo mão de obra especializada, materiais de rotina, encargos trabalhistas, previdenciários, tributos (ISS, PIS, COFINS), seguros e EPIs.
+
+Condição de Pagamento: O faturamento será realizado mensalmente, com vencimento para 30 dias após a emissão da respectiva Nota Fiscal de prestação de serviços.
+
+Serviços Extraordinários: Demandas que excedam os limites de metragem estipulados no item 1, ou intervenções estruturais de grande porte, serão objeto de orçamento complementar para aprovação prévia.
+
+Validade da Proposta: 30 dias."""
+            ]
+
         while len(p_esc) < 4: p_esc.append("")
-        t1 = st.text_area("1. Metodologia", value=p_esc[0], height=100)
-        t2 = st.text_area("2. Materiais", value=p_esc[1], height=70)
-        t3 = st.text_area("3. Atendimento", value=p_esc[2], height=70)
-        t4 = st.text_area("Condições Comerciais", value=p_esc[3], height=70)
+        t1 = st.text_area("1. Metodologia", value=p_esc[0], height=400)
+        t2 = st.text_area("2. Materiais", value=p_esc[1], height=300)
+        t3 = st.text_area("3. Atendimento", value=p_esc[2], height=250)
+        t4 = st.text_area("Condições Comerciais", value=p_esc[3], height=250)
         escopo_final = f"{t1}|||{t2}|||{t3}|||{t4}"
 
     with st.expander("3. Fotos e Valores", expanded=True):
