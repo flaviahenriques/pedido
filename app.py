@@ -24,6 +24,8 @@ if "edit_id" not in st.session_state: st.session_state.edit_id = None
 
 def transformar_url_em_base64(url):
     """ Baixa a foto da URL e converte em Base64 para o PDF não quebrar """
+    if not url or not str(url).startswith("http"):
+        return url
     try:
         headers = {'User-Agent': 'Mozilla/5.0'}
         res = requests.get(url, headers=headers, timeout=15)
@@ -37,24 +39,25 @@ def transformar_url_em_base64(url):
 
 def carregar_imagem_base64(foto_obj):
     """ Gerencia se a foto vem de upload novo ou se já é base64/url """
-    # Se já transformamos em Base64 (estratégia nova)
-    if str(foto_obj.get('url_foto')).startswith("data:image"):
-        return foto_obj['url_foto']
+    # 1. Se já for Base64 (estratégia para PDF)
+    url_at = foto_obj.get('url_foto')
+    if url_at and str(url_at).startswith("data:image"):
+        return url_at
     
-    # Se for uma URL comum, tenta converter
-    if foto_obj.get('url_foto') and str(foto_obj['url_foto']).startswith("http"):
-        return transformar_url_em_base64(foto_obj['url_foto'])
-            
-    # Se for um arquivo de upload novo
-    try:
-        if 'file' in foto_obj:
+    # 2. Se for um arquivo de upload novo (Streamlit UploadedFile)
+    if 'file' in foto_obj:
+        try:
             conteudo = foto_obj['file'].getvalue()
             b64 = base64.b64encode(conteudo).decode()
             ext = foto_obj['file'].name.split('.')[-1].lower()
             return f"data:image/{ext};base64,{b64}"
-    except:
-        pass
-    
+        except:
+            pass
+            
+    # 3. Se for uma URL vinda do banco, tenta converter
+    if url_at and str(url_at).startswith("http"):
+        return transformar_url_em_base64(url_at)
+        
     return "https://via.placeholder.com/400x300?text=Erro+na+Imagem"
 
 # =========================================================
@@ -72,7 +75,6 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
         fotos_html += '<b class="secao-titulo">4. RELATÓRIO FOTOGRÁFICO</b>'
         fotos_html += '<div style="display: flex; flex-wrap: wrap; gap: 2%; margin-top: 15px;">'
         for f in lista_fotos:
-            # Pega o link ou o Base64
             img_src = carregar_imagem_base64(f)
             fotos_html += f"""
             <div style="width: 48%; margin-bottom:20px; page-break-inside: avoid;">
@@ -180,6 +182,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
         </div>
     </body>
     </html>"""
+
 # =========================================================
 # 3) INTERFACE
 # =================================########################
@@ -192,18 +195,26 @@ with st.sidebar:
         st.rerun()
 
 if menu == "Gerenciar Pedidos":
-    if st.button("📝 Editar", key=f"ed_{p['id']}"):
+    st.header("📋 Histórico")
+    pedidos = supabase.table("orcamentos").select("*").order("id", desc=True).execute().data
+    lista_cli = sorted(list(set([p['cliente_razao_social'] for p in pedidos if p['cliente_razao_social']])))
+    filtro = st.selectbox("Filtrar Cliente", ["Todos"] + lista_cli)
+    
+    for p in pedidos:
+        if filtro != "Todos" and p['cliente_razao_social'] != filtro: continue
+        with st.expander(f"ID {str(p['id']).zfill(4)} - {p['cliente_razao_social']} - {p['empreendimento']}"):
+            # CORREÇÃO NameError: O botão agora está dentro do loop que define 'p'
+            if st.button("📝 Editar", key=f"ed_{p['id']}"):
                 st.session_state.edit_id = p['id']
                 it_db = supabase.table("itens_orcamento").select("*").eq("orcamento_id", p['id']).execute().data
                 ft_db = supabase.table("fotos_relatorio").select("*").eq("orcamento_id", p['id']).execute().data
                 
                 st.session_state.itens = [{"serv": i['servico'], "qtd": i['quantidade'], "total": i['valor_total']} for i in it_db]
                 
-                # NOVO: Aqui forçamos a conversão das URLs antigas para dados que o PDF entende
+                # CORREÇÃO FOTOS RASGADAS: Converter histórico para Base64 no carregamento
                 fotos_carregadas = []
-                with st.spinner("Processando imagens do histórico..."):
+                with st.spinner("Carregando imagens do histórico..."):
                     for f in ft_db:
-                        # Convertemos a URL em Base64 imediatamente
                         b64_img = transformar_url_em_base64(f['url_foto'])
                         fotos_carregadas.append({"url_foto": b64_img, "nome": f['nome_item']})
                 st.session_state.fotos = fotos_carregadas
@@ -250,13 +261,20 @@ else:
         up_f = st.file_uploader("Subir Fotos", accept_multiple_files=True)
         if up_f and st.button("🪄 Processar Fotos"):
             for f in up_f:
+                # Transforma novo upload em Base64 imediatamente para evitar problemas no PDF
+                conteudo = f.getvalue()
+                b64 = base64.b64encode(conteudo).decode()
+                ext = f.name.split('.')[-1].lower()
                 nome_limpo = f.name.rsplit('.', 1)[0].replace('_', ' ').title()
-                st.session_state.fotos.append({"file": f, "nome": nome_limpo})
+                st.session_state.fotos.append({
+                    "url_foto": f"data:image/{ext};base64,{b64}", 
+                    "nome": nome_limpo
+                })
             st.rerun()
         
         for idx, f in enumerate(st.session_state.fotos):
             cc1, cc2, cc3 = st.columns([1, 4, 0.5])
-            img_preview = f.get('url_foto') if f.get('url_foto') else f.get('file')
+            img_preview = f.get('url_foto')
             if img_preview: cc1.image(img_preview, width=120)
             f['nome'] = cc2.text_input(f"Legenda {idx+1}", f['nome'], key=f"f_txt_{idx}")
             if cc3.button("🗑️", key=f"del_f_{idx}"): st.session_state.fotos.pop(idx); st.rerun()
@@ -291,9 +309,7 @@ else:
             supabase.table("itens_orcamento").insert({"orcamento_id": oid, "servico": i['serv'], "quantidade": i['qtd'], "valor_total": i['total']}).execute()
         
         for f in st.session_state.fotos: 
-            # Se for uma foto que já estava no banco (Base64), não precisamos da URL original aqui para salvar,
-            # mas o ideal é que você tenha um sistema de upload para o Storage.
-            # Por enquanto, mantemos a URL se existir, senão um placeholder.
+            # Salva a URL original se for HTTP, senão placeholder (o Base64 é para o PDF, não guardamos no banco para não pesar)
             url_f = f.get('url_foto') if (f.get('url_foto') and "http" in f['url_foto']) else "https://via.placeholder.com/400x300"
             supabase.table("fotos_relatorio").insert({"orcamento_id": oid, "nome_item": f['nome'], "url_foto": url_f}).execute()
         st.success(f"✅ Proposta Salva! Número: {str(oid).zfill(4)}")
