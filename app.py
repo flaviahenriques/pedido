@@ -22,7 +22,6 @@ if "fotos" not in st.session_state: st.session_state.fotos = []
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 
 def carregar_imagem_base64(foto_obj):
-    # Correção: Se já tiver a URL (veio do banco), retorna ela direto para o PDF
     if foto_obj.get('url_foto') and foto_obj['url_foto'].startswith("http"):
         return foto_obj['url_foto']
     try:
@@ -34,7 +33,7 @@ def carregar_imagem_base64(foto_obj):
         return "https://via.placeholder.com/400x300?text=Erro+na+Imagem"
 
 # =========================================================
-# 2) DESIGN DA PROPOSTA
+# 2) DESIGN DA PROPOSTA (AGORA COM CAPA)
 # =========================================================
 def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados, escopo, lista_itens, lista_fotos, valor_total):
     data_hoje = datetime.now().strftime("%d/%m/%Y")
@@ -66,61 +65,90 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
     <head>
         <style>
             @media all {{
-                body {{ font-family: Arial, sans-serif; color: #333; margin: 0; padding: 20px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
-                .no-print {{ background-color: #002d5b; color: white; padding: 12px; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 20px; font-weight: bold; }}
+                body {{ font-family: Arial, sans-serif; color: #333; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
+                .no-print {{ background-color: #002d5b; color: white; padding: 12px; border: none; border-radius: 5px; cursor: pointer; margin: 20px; font-weight: bold; }}
                 .secao-titulo {{ color:#002d5b; font-size:14px; text-transform: uppercase; margin-top: 25px; display:block; border-bottom: 2px solid #002d5b; padding-bottom:3px; font-weight: bold; }}
                 .texto {{ text-align: justify; font-size: 13px; white-space: pre-wrap; margin-top:8px; line-height:1.4; }}
+                .conteudo-pagina {{ padding: 20px; }}
+                .capa {{
+                    height: 28.5cm;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    align-items: center;
+                    border: 15px solid #002d5b;
+                    padding: 50px;
+                    text-align: center;
+                    page-break-after: always;
+                    box-sizing: border-box;
+                }}
             }}
-            @page {{ size: A4; margin: 1cm; }}
-            @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; margin: 0; }} }}
+            @page {{ size: A4; margin: 0; }}
+            @media print {{ .no-print {{ display: none !important; }} }}
         </style>
     </head>
     <body>
         <button class="no-print" onclick="window.print()">🖨️ IMPRIMIR / SALVAR PDF</button>
 
-        <table style="width:100%; border-collapse: collapse; margin-bottom: 5px;">
-            <tr>
-                <td style="width:35%; vertical-align: middle;">
-                    <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="200">
-                </td>
-                <td style="width:65%; text-align:right; vertical-align: middle; font-size:10px; line-height: 1.5;">
-                    <b style="color:#002d5b; font-size:12px;">PROFIX GESTÃO DE FACILITIES</b><br>
-                    CNPJ: 52.620.102/0001-03<br>
-                    Av. Marechal Câmara, 160, Centro, Rio De Janeiro RJ, 20020-907<br>
-                    Tel: 21 3609-1314 | atendimento@profixmanutencao.com<br>
-                    www.profixmanutencao.com
-                </td>
-            </tr>
-        </table>
-        
-        <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-size:18px; font-weight:bold;">
-            PROPOSTA TÉCNICA COMERCIAL
-        </div>
-        <div style="display:flex; justify-content:space-between; margin-top:5px; font-size:12px; font-weight:bold; color:#002d5b;">
-            <span>ORÇAMENTO Nº: {num_exibicao}</span>
-            <span>Rio de Janeiro, {data_hoje}</span>
-        </div>
-        
-        <div style="border:1px solid #002d5b; padding:12px; margin-top:10px; margin-bottom:15px; font-size:13px; display:flex;">
-            <div style="flex:1;"><b>CLIENTE:</b> {r_social}<br><b>CNPJ:</b> {cnpj_val}</div>
-            <div style="flex:1; border-left: 1px solid #002d5b; padding-left:15px;"><b>EMPREENDIMENTO:</b> {empreend}<br><b>A/C:</b> {cuidados}</div>
-        </div>
-
-        <b class="secao-titulo">1. METODOLOGIA E ESCOPO TÉCNICO</b><div class="texto">{s1}</div>
-        <b class="secao-titulo">2. MATERIAIS INCLUSOS</b><div class="texto">{s2}</div>
-        <b class="secao-titulo">3. ATENDIMENTO E SUPORTE</b><div class="texto">{s3}</div>
-        
-        {fotos_html}
-
-        <div style="page-break-inside: avoid;">
-            <b class="secao-titulo">5. DETALHAMENTO DE INVESTIMENTO</b>
-            <div style="margin-top:10px;">{itens_html}</div>
+        <div class="capa">
+            <div style="margin-top: 50px;">
+                <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="350">
+            </div>
             
-            <div style="margin-top:30px; display:flex; justify-content:space-between; align-items:flex-start;">
-                <div style="font-size:11px; color:#555; flex:1; padding-right: 20px;">{s4}</div>
-                <div style="background:#f1f4f9 !important; padding:20px; border-left:8px solid #002d5b; text-align:right; min-width:260px;">
-                    <small style="color:#666;">VALOR TOTAL DO PROJETO</small><br>
-                    <b style="font-size:26px; color:#002d5b;">R$ {valor_total:,.2f}</b>
+            <div>
+                <h1 style="color: #002d5b; font-size: 42px; margin-bottom: 5px;">PROPOSTA TÉCNICA</h1>
+                <h3 style="color: #666; letter-spacing: 3px; font-weight: normal;">GESTÃO E MANUTENÇÃO DE FACILITIES</h3>
+            </div>
+
+            <div style="width: 80%; border-top: 2px solid #002d5b; padding-top: 30px; margin-bottom: 50px;">
+                <p style="font-size: 18px; color: #333; margin: 5px 0;"><b>CLIENTE:</b> {r_social}</p>
+                <p style="font-size: 18px; color: #333; margin: 5px 0;"><b>EMPREENDIMENTO:</b> {empreend}</p>
+                <p style="font-size: 16px; color: #002d5b; margin-top: 20px;"><b>PROPOSTA Nº:</b> {num_exibicao}</p>
+                <p style="font-size: 14px; color: #888;">Rio de Janeiro, {data_hoje}</p>
+            </div>
+        </div>
+
+        <div class="conteudo-pagina">
+            <table style="width:100%; border-collapse: collapse; margin-bottom: 5px;">
+                <tr>
+                    <td style="width:35%; vertical-align: middle;">
+                        <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="180">
+                    </td>
+                    <td style="width:65%; text-align:right; vertical-align: middle; font-size:10px; line-height: 1.5;">
+                        <b style="color:#002d5b; font-size:12px;">PROFIX GESTÃO DE FACILITIES</b><br>
+                        CNPJ: 52.620.102/0001-03<br>
+                        Av. Marechal Câmara, 160, Centro, Rio De Janeiro RJ, 20020-907<br>
+                        Tel: 21 3609-1314 | atendimento@profixmanutencao.com<br>
+                        www.profixmanutencao.com
+                    </td>
+                </tr>
+            </table>
+            
+            <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-size:18px; font-weight:bold;">
+                PROPOSTA TÉCNICA COMERCIAL
+            </div>
+            
+            <div style="border:1px solid #002d5b; padding:12px; margin-top:10px; margin-bottom:15px; font-size:13px; display:flex;">
+                <div style="flex:1;"><b>CLIENTE:</b> {r_social}<br><b>CNPJ:</b> {cnpj_val}</div>
+                <div style="flex:1; border-left: 1px solid #002d5b; padding-left:15px;"><b>EMPREENDIMENTO:</b> {empreend}<br><b>A/C:</b> {cuidados}</div>
+            </div>
+
+            <b class="secao-titulo">1. METODOLOGIA E ESCOPO TÉCNICO</b><div class="texto">{s1}</div>
+            <b class="secao-titulo">2. MATERIAIS INCLUSOS</b><div class="texto">{s2}</div>
+            <b class="secao-titulo">3. ATENDIMENTO E SUPORTE</b><div class="texto">{s3}</div>
+            
+            {fotos_html}
+
+            <div style="page-break-inside: avoid;">
+                <b class="secao-titulo">5. DETALHAMENTO DE INVESTIMENTO</b>
+                <div style="margin-top:10px;">{itens_html}</div>
+                
+                <div style="margin-top:30px; display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div style="font-size:11px; color:#555; flex:1; padding-right: 20px;">{s4}</div>
+                    <div style="background:#f1f4f9 !important; padding:20px; border-left:8px solid #002d5b; text-align:right; min-width:260px;">
+                        <small style="color:#666;">VALOR TOTAL DO PROJETO</small><br>
+                        <b style="font-size:26px; color:#002d5b;">R$ {valor_total:,.2f}</b>
+                    </div>
                 </div>
             </div>
         </div>
@@ -129,7 +157,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
 
 # =========================================================
 # 3) INTERFACE
-# =================================########################
+# =========================================================
 with st.sidebar:
     st.image("https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix", width=180)
     st.title("🛡️ Painel PROFIX")
@@ -151,14 +179,7 @@ if menu == "Gerenciar Pedidos":
                 it_db = supabase.table("itens_orcamento").select("*").eq("orcamento_id", p['id']).execute().data
                 ft_db = supabase.table("fotos_relatorio").select("*").eq("orcamento_id", p['id']).execute().data
                 st.session_state.itens = [{"serv": i['servico'], "qtd": i['quantidade'], "total": i['valor_total']} for i in it_db]
-                
-                # CORREÇÃO: Limpa a lista e garante que o dicionário tenha as chaves certas para a URL
-                st.session_state.fotos = []
-                for f in ft_db:
-                    st.session_state.fotos.append({
-                        "url_foto": f['url_foto'], 
-                        "nome": f['nome_item']
-                    })
+                st.session_state.fotos = [{"url_foto": f['url_foto'], "nome": f['nome_item']} for f in ft_db]
                 st.rerun()
 
 else:
@@ -207,7 +228,7 @@ Zelo com Inox e Metais: Limpeza técnica e conservação estética de portas de 
 
 Este escopo não contempla: manutenção mecânica/eletrônica de ar-condicionado (apenas filtros e drenos), reposição de vidros/espelhos, manutenção mecânica de elevadores, reformas estruturais, limpeza de fachadas ou reparos em mobiliário solto/decoração.
 
-Objetivo: Manter a infraestrutura operacional e estética em nível de excelência, permitindo que o foco total do visitante esteja na qualidade e nos detalhes do imóvel.""",
+Objetivo: Manter a infraestrutura operacional e estética em nível de excellence, permitindo que o foco total do visitante esteja na qualidade e nos detalhes do imóvel.""",
 
                 """A PROFIX assume o fornecimento integral de todos os materiais de consumo e peças de reposição necessários para a execução dos serviços descritos nesta proposta. Nossa logística de suprimentos segue critérios rigorosos para garantir a integridade do projeto e a valorização do imóvel:
 
@@ -260,12 +281,9 @@ Validade da Proposta: 30 dias."""
         
         for idx, f in enumerate(st.session_state.fotos):
             cc1, cc2, cc3 = st.columns([1, 4, 0.5])
-            
-            # Correção: Determina a imagem a ser exibida na interface (URL ou arquivo bruto)
             img_preview = f.get('url_foto') if f.get('url_foto') else f.get('file')
             if img_preview:
                 cc1.image(img_preview, width=60)
-            
             f['nome'] = cc2.text_input(f"Legenda {idx+1}", f['nome'], key=f"f_txt_{idx}")
             if cc3.button("🗑️", key=f"del_f_{idx}"): st.session_state.fotos.pop(idx); st.rerun()
 
