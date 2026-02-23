@@ -340,26 +340,21 @@ else:
 
     st.divider()
     st.subheader("👁️ Pré-visualização")
+    
+    # Geramos o HTML da proposta
     prev = montar_layout_proposta(None, razao, cnpj, emp, loc, ac, escopo, st.session_state.itens, st.session_state.fotos, total)
+    
+    # Exibimos na tela
     st.components.v1.html(prev, height=900, scrolling=True)
 
-    # =========================================================
-    # BOTÃO DE PDF CORRIGIDO (DOWNLOAD DIRETO)
-    # =========================================================
-    # Criamos o arquivo antes, para o botão de download já ter o dado pronto
-    if razao and st.session_state.itens:
-        try:
-            pdf_bytes = gerar_pdf_profix(razao, escopo, total, st.session_state.itens)
-            
-            st.download_button(
-                label="📥 BAIXAR ORÇAMENTO EM PDF",
-                data=pdf_bytes,
-                file_name=f"Orcamento_{razao.replace(' ', '_')}.pdf",
-                mime="application/pdf",
-                use_container_width=True,
-                type="secondary" # Diferencia do botão de salvar
-            )
-        except Exception as e:
-            st.error(f"Erro ao preparar PDF: {e}")
-    else:
-        st.info("Preencha a Razão Social e adicione itens para habilitar o download do PDF.")
+    # BOTÃO DE IMPRESSÃO (O jeito que mantém a formatação 100% igual à tela)
+    if st.button("📄 GERAR PDF PROFISSIONAL (IMPRIMIR)", use_container_width=True):
+        # Esse comando abre a janela de impressão do seu navegador já com o orçamento pronto
+        st.components.v1.html(f"""
+            {prev}
+            <script>
+                // Pequeno atraso para garantir que as fotos carreguem antes de imprimir
+                setTimeout(function() {{ window.print(); }}, 500);
+            </script>
+        """, height=0)
+        st.info("Escolha a opção 'Salvar como PDF' na janela que abriu.")
