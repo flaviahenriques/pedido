@@ -4,19 +4,32 @@ import openai
 from PIL import Image
 from supabase import create_client
 import base64
+import io
 
 # #########################################################
 # 1) CONFIGURAÇÕES DE PÁGINA E CONEXÕES
 # #########################################################
 st.set_page_config(page_title="PROFIX - Gerador de Orçamentos", layout="wide")
 
-# Conexões seguras usando st.secrets
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 client = openai.OpenAI(api_key=OPENAI_API_KEY)
+
+# =========================================================
+# FUNÇÃO AUXILIAR PARA FOTOS EM BASE64 (PARA PRÉ-VISUALIZAÇÃO)
+# =========================================================
+def get_image_base64(file_obj):
+    if isinstance(file_obj, str): # Se já for uma URL
+        return file_obj
+    try:
+        file_obj.seek(0)
+        b64 = base64.b64encode(file_obj.read()).decode()
+        return f"data:image/jpeg;base64,{b64}"
+    except:
+        return ""
 
 # =========================================================
 # 2) FUNÇÃO PARA MONTAR O HTML DO ORÇAMENTO (DESIGN A4)
@@ -41,14 +54,18 @@ def montar_layout_proposta(orc_id, r_social, cnpj_val, empreend, local, cuidados
         fotos_html += "<br><br><b style='color:#002d5b; font-size:16px;'>3. RELATÓRIO FOTOGRÁFICO</b><br><br>"
         fotos_html += '<div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between;">'
         for f_idx, foto in enumerate(lista_fotos):
-            url = foto.get('url_foto') or foto.get('file')
+            # Lógica para pegar a imagem (URL ou arquivo local)
+            src = foto.get('url_foto') or foto.get('file')
+            if not isinstance(src, str): # Se for um objeto de upload
+                src = get_image_base64(src)
+            
             legenda = foto.get('nome_item') or foto.get('nome', 'Item')
             qtd_un = foto.get('unidades') or foto.get('qtd', '1')
-            if hasattr(url, "read"): continue
+            
             fotos_html += f"""
             <div style="width: 45%; margin-bottom:20px; page-break-inside: avoid;">
                 <div style="width: 100%; height: 200px; overflow: hidden; border-radius:8px; border: 1px solid #ddd;">
-                    <img src="{url}" style="width:100%; height:100%; object-fit: cover;">
+                    <img src="{src}" style="width:100%; height:100%; object-fit: cover;">
                 </div>
                 <p style="text-align:center; font-size:11px; color:#002d5b; font-weight:bold; margin-top:5px;">
                     Foto {f_idx+1}: {legenda} (Qtd: {qtd_un})
@@ -66,7 +83,6 @@ def montar_layout_proposta(orc_id, r_social, cnpj_val, empreend, local, cuidados
     }}
     .titulo-barra {{ background-color: #002d5b; color: white; text-align: center; padding: 12px; font-weight: bold; margin: 20px 0; }}
     .texto-escopo {{ margin: 10px 0 25px 0; text-align: justify; font-size: 13px; white-space: pre-wrap; word-wrap: break-word; }}
-    
     @media print {{
         body {{ background: white !important; }}
         .folha-documento {{ max-width: 100%; width: 100%; padding: 0; margin: 0; box-shadow: none; }}
@@ -78,7 +94,7 @@ def montar_layout_proposta(orc_id, r_social, cnpj_val, empreend, local, cuidados
 <body>
 <div class="folha-documento">
     <div style="display:flex; justify-content:space-between; align-items:center;">
-        <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="200">
+        <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="180">
         <div style="text-align:right; font-size:10px; line-height:1.4;">
             <b>PROFIX GESTÃO DE FACILITIES</b><br>
             CNPJ: 52.620.102/0001-03<br>
@@ -129,7 +145,6 @@ if "fotos" not in st.session_state: st.session_state.fotos = []
 if "pagina" not in st.session_state: st.session_state.pagina = "Criar Novo"
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 
-# Visualização externa (Link do Cliente)
 params = st.query_params
 if "id" in params:
     doc_id = params["id"]
@@ -260,12 +275,11 @@ else:
                 supabase.table("fotos_relatorio").insert({"orcamento_id": oid, "nome_item": f['nome'], "url_foto": url, "unidades": f['unidades']}).execute()
             
             st.success("✅ Orçamento salvo!")
-            st.code(f"Link: https://pedido.streamlit.app/?id={oid}")
         except Exception as e:
             st.error(f"Erro ao salvar: {e}")
 
     # =========================================================
-    # ÁREA DE PRÉ-VISUALIZAÇÃO (BOTÃO OCULTO NO PDF)
+    # ÁREA DE PRÉ-VISUALIZAÇÃO (CORRIGIDA PARA MOSTRAR FOTOS SEMPRE)
     # =========================================================
     st.divider()
     st.subheader("👁️ Pré-visualização")
@@ -273,13 +287,11 @@ else:
     
     st.components.v1.html(f"""
         <style>
-            /* ESTA REGRA ESCONDE O BOTÃO E O FUNDO CINZA NA HORA DE IMPRIMIR */
             @media print {{
                 .no-print {{ display: none !important; }}
                 .preview-container {{ border: none !important; background: white !important; padding: 0 !important; }}
             }}
         </style>
-        
         <div class="no-print" style="margin-bottom: 20px;">
             <button onclick="window.print()" style="
                 width: 100%; background: #002d5b; color: white; padding: 18px; 
@@ -287,7 +299,6 @@ else:
                 font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
             ">🖨️ GERAR PDF / IMPRIMIR</button>
         </div>
-        
         <div class="preview-container" style="border: 1px solid #ddd; background: #f9f9f9; padding: 10px;">
             {html_final}
         </div>
