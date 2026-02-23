@@ -3,6 +3,7 @@ from datetime import datetime
 import openai
 from supabase import create_client
 import base64
+from io import BytesIO
 
 # #########################################################
 # 1) CONFIGURAÇÕES E CONEXÃO
@@ -20,36 +21,44 @@ if "itens" not in st.session_state: st.session_state.itens = []
 if "fotos" not in st.session_state: st.session_state.fotos = []
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 
+# Função auxiliar para converter imagem para Base64 (resolve o erro da imagem rasgada)
+def carregar_imagem_base64(foto_obj):
+    if foto_obj.get('url_foto') and foto_obj['url_foto'].startswith("http"):
+        return foto_obj['url_foto']
+    try:
+        conteudo = foto_obj['file'].getvalue()
+        base64_img = base64.b64encode(conteudo).decode()
+        ext = foto_obj['file'].name.split('.')[-1]
+        return f"data:image/{ext};base64,{base64_img}"
+    except:
+        return "https://via.placeholder.com/400x300?text=Erro+na+Imagem"
+
 # =========================================================
-# 2) DESIGN DA PROPOSTA (CABEÇALHO ATUALIZADO COM ENDEREÇO)
+# 2) DESIGN DA PROPOSTA
 # =========================================================
 def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados, escopo, lista_itens, lista_fotos, valor_total):
     data_hoje = datetime.now().strftime("%d/%m/%Y")
     
-    # Divisão segura do escopo
     partes = escopo.split("|||")
     while len(partes) < 4: partes.append("")
     s1, s2, s3, s4 = partes[0], partes[1], partes[2], partes[3]
 
-    # Galeria de Fotos
+    # Galeria de Fotos Corrigida
     fotos_html = ""
     if lista_fotos:
         fotos_html += "<b style='color:#002d5b; font-size:16px;'>4. RELATÓRIO FOTOGRÁFICO</b><br><br>"
         fotos_html += '<div style="display: flex; flex-wrap: wrap; gap: 2%;">'
         for f in lista_fotos:
-            url = f.get('url_foto') or f.get('file')
-            if hasattr(url, "read"): url = "https://via.placeholder.com/400x300?text=Foto"
+            img_src = carregar_imagem_base64(f)
             fotos_html += f"""
             <div style="width: 48%; margin-bottom:20px; page-break-inside: avoid;">
-                <img src="{url}" style="width:100%; height:220px; object-fit: cover; border:1px solid #ddd; border-radius:5px;">
+                <img src="{img_src}" style="width:100%; height:250px; object-fit: cover; border:1px solid #ddd; border-radius:5px;">
                 <p style="text-align:center; font-size:11px; font-weight:bold; color:#002d5b; margin-top:5px;">{f.get('nome','Item')}</p>
             </div>"""
         fotos_html += '</div>'
 
-    # Itens
     itens_html = "".join([f"<div style='display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:8px 0; font-size:14px;'><span><b>{i['serv'].upper()}</b> (x{i['qtd']})</span><b>R$ {float(i['total']):,.2f}</b></div>" for i in lista_itens])
-
-    num_exibicao = id_orc if id_orc else "PENDENTE"
+    num_exibicao = id_orc if id_orc else "---"
 
     return f"""
     <html>
@@ -62,10 +71,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                 .texto {{ text-align: justify; font-size: 13px; white-space: pre-wrap; margin-top:8px; line-height:1.4; }}
             }}
             @page {{ size: A4; margin: 1cm; }}
-            @media print {{
-                .no-print {{ display: none !important; }}
-                body {{ padding: 0; margin: 0; }}
-            }}
+            @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; margin: 0; }} }}
         </style>
     </head>
     <body>
@@ -121,7 +127,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
     </html>"""
 
 # =========================================================
-# 3) INTERFACE STREAMLIT
+# 3) INTERFACE
 # =========================================================
 with st.sidebar:
     st.image("https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix", width=180)
@@ -145,7 +151,7 @@ if menu == "Gerenciar Pedidos":
                 ft_db = supabase.table("fotos_relatorio").select("*").eq("orcamento_id", p['id']).execute().data
                 st.session_state.itens = [{"serv": i['servico'], "qtd": i['quantidade'], "total": i['valor_total']} for i in it_db]
                 st.session_state.fotos = [{"url_foto": f['url_foto'], "nome": f['nome_item']} for f in ft_db]
-                st.success("Carregado!")
+                st.rerun()
 
 else:
     st.header("📑 " + ("Editando Proposta" if st.session_state.edit_id else "Nova Proposta"))
@@ -183,7 +189,7 @@ else:
         if up_f and st.button("🪄 Processar Fotos"):
             for f in up_f:
                 nome_limpo = f.name.rsplit('.', 1)[0].replace('_', ' ').title()
-                st.session_state.fotos.append({"file": f, "nome": name_limpo})
+                st.session_state.fotos.append({"file": f, "nome": nome_limpo})
             st.rerun()
         
         for idx, f in enumerate(st.session_state.fotos):
@@ -217,12 +223,13 @@ else:
             supabase.table("fotos_relatorio").delete().eq("orcamento_id", oid).execute()
         else:
             res = supabase.table("orcamentos").insert(payload).execute(); oid = res.data[0]['id']
+            st.session_state.edit_id = oid
+
         for i in st.session_state.itens: supabase.table("itens_orcamento").insert({"orcamento_id": oid, "servico": i['serv'], "quantidade": i['qtd'], "valor_total": i['total']}).execute()
         for f in st.session_state.fotos: 
-            url_f = f.get('url_foto', 'https://via.placeholder.com/150')
+            url_f = f.get('url_foto', 'https://via.placeholder.com/400x300?text=Foto+Salva')
             supabase.table("fotos_relatorio").insert({"orcamento_id": oid, "nome_item": f['nome'], "url_foto": url_f}).execute()
-        st.success(f"✅ Salvo com Sucesso!")
-        st.session_state.edit_id = oid
+        st.success(f"✅ Proposta Salva!")
 
     st.divider()
     st.subheader("👁️ Pré-visualização")
