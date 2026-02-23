@@ -72,10 +72,13 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
         fotos_html += '<b class="secao-titulo">4. RELATÓRIO FOTOGRÁFICO</b>'
         fotos_html += '<div style="display: flex; flex-wrap: wrap; gap: 2%; margin-top: 15px;">'
         for f in lista_fotos:
+            # Pega o link ou o Base64
             img_src = carregar_imagem_base64(f)
             fotos_html += f"""
             <div style="width: 48%; margin-bottom:20px; page-break-inside: avoid;">
-                <img src="{img_src}" style="width:100%; height:250px; object-fit: cover; border:1px solid #ddd; border-radius:5px;">
+                <img src="{img_src}" 
+                     onerror="this.src='https://via.placeholder.com/400x300?text=Imagem+Nao+Carregada';"
+                     style="width:100%; height:250px; object-fit: cover; border:1px solid #ddd; border-radius:5px;">
                 <p style="text-align:center; font-size:11px; font-weight:bold; color:#002d5b; margin-top:5px;">{f.get('nome','Item')}</p>
             </div>"""
         fotos_html += '</div>'
@@ -177,7 +180,6 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
         </div>
     </body>
     </html>"""
-
 # =========================================================
 # 3) INTERFACE
 # =================================########################
@@ -190,24 +192,18 @@ with st.sidebar:
         st.rerun()
 
 if menu == "Gerenciar Pedidos":
-    st.header("📋 Histórico")
-    pedidos = supabase.table("orcamentos").select("*").order("id", desc=True).execute().data
-    lista_cli = sorted(list(set([p['cliente_razao_social'] for p in pedidos if p['cliente_razao_social']])))
-    filtro = st.selectbox("Filtrar Cliente", ["Todos"] + lista_cli)
-    for p in pedidos:
-        if filtro != "Todos" and p['cliente_razao_social'] != filtro: continue
-        with st.expander(f"ID {str(p['id']).zfill(4)} - {p['cliente_razao_social']} - {p['empreendimento']}"):
-            if st.button("📝 Editar", key=f"ed_{p['id']}"):
+    if st.button("📝 Editar", key=f"ed_{p['id']}"):
                 st.session_state.edit_id = p['id']
                 it_db = supabase.table("itens_orcamento").select("*").eq("orcamento_id", p['id']).execute().data
                 ft_db = supabase.table("fotos_relatorio").select("*").eq("orcamento_id", p['id']).execute().data
                 
                 st.session_state.itens = [{"serv": i['servico'], "qtd": i['quantidade'], "total": i['valor_total']} for i in it_db]
                 
-                # CORREÇÃO AQUI: Ao carregar fotos antigas, já converte para Base64 na hora
+                # NOVO: Aqui forçamos a conversão das URLs antigas para dados que o PDF entende
                 fotos_carregadas = []
-                with st.spinner("Carregando imagens do histórico..."):
+                with st.spinner("Processando imagens do histórico..."):
                     for f in ft_db:
+                        # Convertemos a URL em Base64 imediatamente
                         b64_img = transformar_url_em_base64(f['url_foto'])
                         fotos_carregadas.append({"url_foto": b64_img, "nome": f['nome_item']})
                 st.session_state.fotos = fotos_carregadas
