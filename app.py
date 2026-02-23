@@ -22,6 +22,7 @@ if "fotos" not in st.session_state: st.session_state.fotos = []
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 
 def carregar_imagem_base64(foto_obj):
+    # Correção: Se já tiver a URL (veio do banco), retorna ela direto para o PDF
     if foto_obj.get('url_foto') and foto_obj['url_foto'].startswith("http"):
         return foto_obj['url_foto']
     try:
@@ -178,7 +179,6 @@ else:
     with st.expander("2. Escopo Técnico", expanded=True):
         p_esc = esc_db.split("|||")
         
-        # Carregamento automático para NOVO orçamento com o seu espaçamento
         if not st.session_state.edit_id and (len(p_esc) < 2 or p_esc[0] == ""):
             p_esc = [
                 """A PROFIX atuará com foco na preservação do padrão estético e na manutenção da integridade das instalações, assegurando que os apartamentos decorados e estandes de vendas mantenham-se em estado de 'novo' e prontos para visitação. Nossa metodologia prioriza a conservação detalhada para que o ambiente reflita fielmente a qualidade do projeto original, compreendendo:
@@ -253,7 +253,11 @@ Validade da Proposta: 30 dias."""
         
         for idx, f in enumerate(st.session_state.fotos):
             cc1, cc2, cc3 = st.columns([1, 4, 0.5])
-            cc1.image(f.get('url_foto') or f.get('file'), width=60)
+            
+            # Correção: Determina a imagem a ser exibida na interface (URL ou arquivo bruto)
+            img_preview = f.get('url_foto') if f.get('url_foto') else f.get('file')
+            cc1.image(img_preview, width=60)
+            
             f['nome'] = cc2.text_input(f"Legenda {idx+1}", f['nome'], key=f"f_txt_{idx}")
             if cc3.button("🗑️", key=f"del_f_{idx}"): st.session_state.fotos.pop(idx); st.rerun()
 
