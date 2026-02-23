@@ -3,6 +3,7 @@ from datetime import datetime
 import openai
 from supabase import create_client
 import base64
+import requests
 from io import BytesIO
 
 # #########################################################
@@ -22,9 +23,18 @@ if "fotos" not in st.session_state: st.session_state.fotos = []
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 
 def carregar_imagem_base64(foto_obj):
-    # Se já tiver a URL (veio do banco), retorna ela direto para o PDF
+    # CORREÇÃO: Se for URL do banco, baixa e converte para Base64 para não quebrar no PDF
     if foto_obj.get('url_foto') and foto_obj['url_foto'].startswith("http"):
-        return foto_obj['url_foto']
+        try:
+            res = requests.get(foto_obj['url_foto'], timeout=10)
+            if res.status_code == 200:
+                base64_img = base64.b64encode(res.content).decode()
+                ext = foto_obj['url_foto'].split('.')[-1].split('?')[0] or "png"
+                return f"data:image/{ext};base64,{base64_img}"
+            return foto_obj['url_foto']
+        except:
+            return foto_obj['url_foto']
+            
     try:
         conteudo = foto_obj['file'].getvalue()
         base64_img = base64.b64encode(conteudo).decode()
