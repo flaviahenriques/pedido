@@ -5,6 +5,7 @@ from PIL import Image
 from supabase import create_client
 import base64
 import io
+import os
 
 # #########################################################
 # 1) CONFIGURAÇÕES DE PÁGINA E CONEXÕES
@@ -54,9 +55,8 @@ def montar_layout_proposta(orc_id, r_social, cnpj_val, empreend, local, cuidados
         fotos_html += "<br><br><b style='color:#002d5b; font-size:16px;'>3. RELATÓRIO FOTOGRÁFICO</b><br><br>"
         fotos_html += '<div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between;">'
         for f_idx, foto in enumerate(lista_fotos):
-            # Lógica para pegar a imagem (URL ou arquivo local)
             src = foto.get('url_foto') or foto.get('file')
-            if not isinstance(src, str): # Se for um objeto de upload
+            if not isinstance(src, str):
                 src = get_image_base64(src)
             
             legenda = foto.get('nome_item') or foto.get('nome', 'Item')
@@ -145,6 +145,7 @@ if "fotos" not in st.session_state: st.session_state.fotos = []
 if "pagina" not in st.session_state: st.session_state.pagina = "Criar Novo"
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 
+# Visualização externa (Link do Cliente)
 params = st.query_params
 if "id" in params:
     doc_id = params["id"]
@@ -205,27 +206,31 @@ else:
 
     with st.expander("2. Escopo e Fotos"):
         escopo = st.text_area("Metodologia Técnica", value=dados_ed.get('metodologia_escopo', ""), height=150)
-        up_f = st.file_uploader("Adicionar Fotos", accept_multiple_files=True)
-        if up_f and st.button("🪄 IA Analisar Fotos"):
+        
+        # UPLOAD DE FOTOS COM LEITURA DE NOME DE ARQUIVO
+        up_f = st.file_uploader("Adicionar Fotos (O nome do arquivo será a legenda)", accept_multiple_files=True)
+        if up_f:
+            novas_fotos = []
             for f in up_f:
-                b64 = base64.b64encode(f.read()).decode('utf-8')
-                f.seek(0)
-                try:
-                    res = client.chat.completions.create(
-                        model="gpt-4o-mini",
-                        messages=[{"role": "user", "content": [{"type": "text", "text": "O que é este item de manutenção? (3 palavras)"}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}]}],
-                        max_tokens=20
-                    )
-                    ia_n = res.choices[0].message.content
-                except: ia_n = "Item verificado"
-                st.session_state.fotos.append({"id": f"{f.name}_{datetime.now().microsecond}", "file": f, "nome": ia_n, "unidades": "1"})
+                # Verifica se a foto já foi adicionada para não duplicar no loop
+                ja_existe = any(foto.get('original_name') == f.name for foto in st.session_state.fotos)
+                if not ja_existe:
+                    # Pega o nome do arquivo e remove a extensão
+                    nome_sugerido = os.path.splitext(f.name)[0].upper()
+                    st.session_state.fotos.append({
+                        "id": f"{f.name}_{datetime.now().microsecond}", 
+                        "file": f, 
+                        "nome": nome_sugerido, 
+                        "unidades": "1",
+                        "original_name": f.name
+                    })
             st.rerun()
 
         for idx, f in enumerate(st.session_state.fotos):
             cc1, cc2, cc3, cc4 = st.columns([1, 3, 1, 0.5])
             cc1.image(f['file'], width=100)
-            f['nome'] = cc2.text_input(f"Descrição {idx}", f['nome'], key=f"f_n_{idx}")
-            f['unidades'] = cc3.text_input(f"Qtd {idx}", f.get('unidades', '1'), key=f"f_q_{idx}")
+            f['nome'] = cc2.text_input(f"Legenda da Foto {idx+1}", f['nome'], key=f"f_n_{idx}")
+            f['unidades'] = cc3.text_input(f"Qtd {idx+1}", f.get('unidades', '1'), key=f"f_q_{idx}")
             if cc4.button("🗑️", key=f"f_d_{idx}"):
                 st.session_state.fotos.pop(idx); st.rerun()
 
@@ -264,6 +269,7 @@ else:
 
             for i in st.session_state.itens:
                 supabase.table("itens_orcamento").insert({"orcamento_id": oid, "servico": i['serv'], "quantidade": i['qtd'], "valor_total": i['total']}).execute()
+            
             for f_idx, f in enumerate(st.session_state.fotos):
                 if isinstance(f['file'], str) and f['file'].startswith('http'):
                     url = f['file']
@@ -274,12 +280,12 @@ else:
                     url = supabase.storage.from_("fotos_orcamentos").get_public_url(f_path)
                 supabase.table("fotos_relatorio").insert({"orcamento_id": oid, "nome_item": f['nome'], "url_foto": url, "unidades": f['unidades']}).execute()
             
-            st.success("✅ Orçamento salvo!")
+            st.success("✅ Orçamento salvo com sucesso!")
         except Exception as e:
             st.error(f"Erro ao salvar: {e}")
 
     # =========================================================
-    # ÁREA DE PRÉ-VISUALIZAÇÃO (CORRIGIDA PARA MOSTRAR FOTOS SEMPRE)
+    # ÁREA DE PRÉ-VISUALIZAÇÃO (BOTÃO OCULTO NO PDF)
     # =========================================================
     st.divider()
     st.subheader("👁️ Pré-visualização")
