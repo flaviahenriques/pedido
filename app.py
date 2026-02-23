@@ -341,20 +341,29 @@ else:
     st.divider()
     st.subheader("👁️ Pré-visualização")
     
-    # Geramos o HTML da proposta
-    prev = montar_layout_proposta(None, razao, cnpj, emp, loc, ac, escopo, st.session_state.itens, st.session_state.fotos, total)
+    # 1. Geramos o HTML
+    html_proposta = montar_layout_proposta(None, razao, cnpj, emp, loc, ac, escopo, st.session_state.itens, st.session_state.fotos, total)
     
-    # Exibimos na tela
-    st.components.v1.html(prev, height=900, scrolling=True)
-
-    # BOTÃO DE IMPRESSÃO (O jeito que mantém a formatação 100% igual à tela)
-    if st.button("📄 GERAR PDF PROFISSIONAL (IMPRIMIR)", use_container_width=True):
-        # Esse comando abre a janela de impressão do seu navegador já com o orçamento pronto
-        st.components.v1.html(f"""
-            {prev}
-            <script>
-                // Pequeno atraso para garantir que as fotos carreguem antes de imprimir
-                setTimeout(function() {{ window.print(); }}, 500);
-            </script>
-        """, height=0)
-        st.info("Escolha a opção 'Salvar como PDF' na janela que abriu.")
+    # 2. Criamos um botão HTML real dentro do componente
+    # Isso evita que o navegador bloqueie o comando de impressão
+    botao_imprimir_html = f"""
+        <div style="text-align: center; margin-bottom: 20px;">
+            <button onclick="window.print()" style="
+                background-color: #002d5b; 
+                color: white; 
+                padding: 15px 30px; 
+                border: none; 
+                border-radius: 5px; 
+                cursor: pointer; 
+                font-weight: bold;
+                width: 100%;
+                font-size: 16px;
+            ">
+                🖨️ CLIQUE AQUI PARA GERAR PDF / IMPRIMIR
+            </button>
+        </div>
+        {html_proposta}
+    """
+    
+    # 3. Exibimos tudo junto
+    st.components.v1.html(botao_imprimir_html, height=1000, scrolling=True)
