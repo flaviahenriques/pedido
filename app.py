@@ -56,7 +56,7 @@ def upload_imagem_supabase(foto_obj):
     return None
 
 # =========================================================
-# 2) DESIGN DA PROPOSTA (COM MARGENS CORRIGIDAS)
+# 2) DESIGN DA PROPOSTA (CORREÇÃO FINAL DE MARGENS)
 # =========================================================
 def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados, escopo, lista_itens, lista_fotos, valor_total):
     data_hoje = datetime.now().strftime("%d/%m/%Y")
@@ -94,25 +94,23 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
             @media all {{
                 body {{ 
                     font-family: 'Segoe UI', Arial, sans-serif; 
-                    color: #333; 
-                    margin: 0; 
-                    padding: 0; 
+                    color: #333; margin: 0; padding: 0; 
                     -webkit-print-color-adjust: exact !important; 
-                    print-color-adjust: exact !important; 
                 }}
                 .no-print {{ 
-                    background-color: #002d5b; color: white; padding: 12px 24px; border: none; 
-                    border-radius: 4px; cursor: pointer; margin: 20px; font-weight: bold; 
+                    background-color: #002d5b; color: white; padding: 12px 24px; 
+                    border: none; border-radius: 4px; cursor: pointer; margin: 20px; 
                 }}
-                /* Margens Globais de Conteúdo */
+                
+                /* Margens do Conteúdo */
                 .conteudo-pagina {{ 
-                    padding: 60px 60px; /* Margem interna generosa */
+                    padding: 40px 0; /* Espaçamento interno */
                     page-break-before: always; 
-                    position: relative;
                 }}
+
                 .secao-titulo {{ 
                     color:#002d5b; font-size:14px; text-transform: uppercase; 
-                    margin-top: 35px; display:block; border-bottom: 2px solid #002d5b; 
+                    margin-top: 30px; display:block; border-bottom: 2px solid #002d5b; 
                     padding-bottom:5px; font-weight: bold; 
                 }}
                 .texto {{ 
@@ -121,89 +119,68 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                 }}
                 
                 /* Estilos da Capa */
-                .capa-container {{ 
-                    height: 29.7cm; width: 21cm; display: flex; 
-                    page-break-after: always; background-color: white; 
-                }}
-                .capa-sidebar {{ width: 60px; background-color: #002d5b; height: 100%; }}
-                .capa-main {{ 
-                    flex: 1; padding: 80px 60px; display: flex; 
-                    flex-direction: column; justify-content: space-between; 
-                }}
-                .capa-header {{ border-bottom: 4px solid #002d5b; padding-bottom: 20px; }}
-                .capa-titulo {{ font-size: 48px; color: #002d5b; font-weight: 800; margin: 0; line-height: 1; }}
-                .capa-subtitulo {{ font-size: 18px; color: #666; text-transform: uppercase; letter-spacing: 4px; margin-top: 10px; }}
-                .capa-info {{ margin-top: 80px; }}
-                .capa-label {{ color: #002d5b; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; display: block; }}
-                .capa-valor {{ font-size: 20px; color: #333; margin-bottom: 25px; display: block; }}
-                .capa-footer {{ font-size: 14px; color: #888; border-top: 1px solid #eee; padding-top: 20px; }}
+                .capa-container {{ height: 28cm; width: 100%; display: flex; page-break-after: always; }}
+                .capa-sidebar {{ width: 50px; background-color: #002d5b; height: 100%; }}
+                .capa-main {{ flex: 1; padding: 60px 40px; display: flex; flex-direction: column; justify-content: space-between; }}
+                .capa-titulo {{ font-size: 48px; color: #002d5b; font-weight: 800; margin: 0; line-height: 1.1; }}
             }}
-            /* Configuração de Impressão A4 */
+
+            /* CONFIGURAÇÃO DE IMPRESSÃO - CORRIGE O TOPO GRUDADO */
             @page {{ 
                 size: A4; 
-                margin: 0; /* O padding do .conteudo-pagina fará o papel da margem */
+                margin: 2cm 1.5cm 1.5cm 1.5cm; /* Margem superior de 2cm para não grudar no topo */
             }}
+
             @media print {{ 
-                .no-print {{ display: none !important; }} 
+                .no-print {{ display: none !important; }}
+                .capa-container {{ height: 26cm; }} /* Ajuste para não quebrar página na capa */
             }}
         </style>
     </head>
     <body>
-        <button class="no-print" onclick="window.print()">🖨️ GERAR PDF PROFISSIONAL (COM MARGENS)</button>
+        <button class="no-print" onclick="window.print()">🖨️ GERAR PDF (Ajustado)</button>
         
         <div class="capa-container">
             <div class="capa-sidebar"></div>
             <div class="capa-main">
-                <div class="capa-header">
+                <div>
                     <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="220">
-                    <div style="margin-top: 60px;">
+                    <div style="margin-top: 80px;">
                         <h1 class="capa-titulo">PROPOSTA<br>TÉCNICA</h1>
-                        <div class="capa-subtitulo">Manutenção e Facilities</div>
+                        <div style="font-size: 18px; color: #666; text-transform: uppercase; letter-spacing: 4px; margin-top: 10px;">Manutenção e Facilities</div>
                     </div>
                 </div>
-                <div class="capa-info">
-                    <span class="capa-label">Preparado para:</span>
-                    <span class="capa-valor"><b>{r_social}</b></span>
-                    <span class="capa-label">Empreendimento:</span>
-                    <span class="capa-valor">{empreend}</span>
-                    <span class="capa-label">Referência:</span>
-                    <span class="capa-valor">ORÇAMENTO #{num_exibicao}</span>
+                <div style="margin-bottom: 100px;">
+                    <span style="color: #002d5b; font-size: 12px; font-weight: bold; text-transform: uppercase;">Preparado para:</span><br>
+                    <span style="font-size: 24px; color: #333; margin-bottom: 25px; display: block;"><b>{r_social}</b></span>
+                    <span style="color: #002d5b; font-size: 12px; font-weight: bold; text-transform: uppercase;">Referência:</span><br>
+                    <span style="font-size: 18px; color: #333;">ORÇAMENTO #{num_exibicao}</span>
                 </div>
-                <div class="capa-footer">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>Rio de Janeiro, {data_hoje}</span>
-                        <span><b>PROFIX</b> | Gestão de Facilities</span>
-                    </div>
+                <div style="font-size: 14px; color: #888; border-top: 1px solid #eee; padding-top: 20px;">
+                    Rio de Janeiro, {data_hoje}
                 </div>
             </div>
         </div>
 
         <div class="conteudo-pagina">
-            <table style="width:100%; border-collapse: collapse; margin-bottom: 20px;">
+            <table style="width:100%; border-collapse: collapse; margin-bottom: 30px;">
                 <tr>
                     <td style="width:35%; vertical-align: middle;">
-                        <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="200">
+                        <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="180">
                     </td>
-                    <td style="width:65%; text-align:right; vertical-align: middle; font-size:10px; line-height: 1.5;">
-                        <b style="color:#002d5b; font-size:12px;">PROFIX GESTÃO DE FACILITIES</b><br>
+                    <td style="width:65%; text-align:right; vertical-align: middle; font-size:10px; line-height: 1.4; color: #666;">
+                        <b style="color:#002d5b; font-size:11px;">PROFIX GESTÃO DE FACILITIES</b><br>
                         CNPJ: 52.620.102/0001-03<br>
-                        Av. Marechal Câmara, 160, Centro, Rio De Janeiro RJ, 20020-907<br>
-                        Tel: 21 3609-1314 | atendimento@profixmanutencao.com<br>
-                        www.profixmanutencao.com
+                        Tel: 21 3609-1314 | www.profixmanutencao.com
                     </td>
                 </tr>
             </table>
             
-            <div style="background:#002d5b !important; color:white !important; text-align:center; padding:12px; font-size:18px; font-weight:bold; margin-bottom: 10px;">PROPOSTA TÉCNICA COMERCIAL</div>
+            <div style="background:#002d5b !important; color:white !important; text-align:center; padding:15px; font-size:18px; font-weight:bold; margin-bottom: 20px;">DETALHAMENTO DA PROPOSTA</div>
             
-            <div style="display:flex; justify-content:space-between; margin-bottom:15px; font-size:12px; font-weight:bold; color:#002d5b;">
-                <span>ORÇAMENTO Nº: {num_exibicao}</span>
-                <span>Rio de Janeiro, {data_hoje}</span>
-            </div>
-
-            <div style="border:1px solid #002d5b; padding:15px; margin-bottom:20px; font-size:13px; display:flex;">
-                <div style="flex:1;"><b>CLIENTE:</b> {r_social}<br><b>CNPJ:</b> {cnpj_val}</div>
-                <div style="flex:1; border-left: 1px solid #002d5b; padding-left:15px;"><b>EMPREENDIMENTO:</b> {empreend}<br><b>A/C:</b> {cuidados}</div>
+            <div style="border:1px solid #eee; padding:20px; margin-bottom:20px; font-size:13px; background: #fafafa;">
+                <div style="margin-bottom: 10px;"><b>CLIENTE:</b> {r_social} | <b>CNPJ:</b> {cnpj_val}</div>
+                <div><b>EMPREENDIMENTO:</b> {empreend}</div>
             </div>
 
             <b class="secao-titulo">1. METODOLOGIA E ESCOPO TÉCNICO</b><div class="texto">{s1}</div>
@@ -212,21 +189,20 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
             
             {fotos_html}
 
-            <div style="page-break-inside: avoid; margin-top: 30px;">
-                <b class="secao-titulo">5. DETALHAMENTO DE INVESTIMENTO</b>
+            <div style="page-break-inside: avoid; margin-top: 40px;">
+                <b class="secao-titulo">5. INVESTIMENTO</b>
                 <div style="margin-top:15px;">{itens_html}</div>
-                <div style="margin-top:40px; display:flex; justify-content:space-between; align-items:flex-start;">
-                    <div style="font-size:11px; color:#555; flex:1; padding-right: 30px;">{s4}</div>
-                    <div style="background:#f1f4f9 !important; padding:25px; border-left:8px solid #002d5b; text-align:right; min-width:280px;">
-                        <small style="color:#666;">VALOR TOTAL DO PROJETO</small><br>
-                        <b style="font-size:28px; color:#002d5b;">R$ {valor_total:,.2f}</b>
+                <div style="margin-top:40px; display:flex; justify-content:space-between; align-items:flex-end;">
+                    <div style="font-size:11px; color:#888; flex:1; padding-right: 40px;">{s4}</div>
+                    <div style="background:#002d5b !important; color: white !important; padding:25px; text-align:right; min-width:250px; border-radius: 5px;">
+                        <small>VALOR TOTAL</small><br>
+                        <b style="font-size:26px;">R$ {valor_total:,.2f}</b>
                     </div>
                 </div>
             </div>
         </div>
     </body>
     </html>"""
-
 # =========================================================
 # 3) INTERFACE (MANTIDA IGUAL)
 # =========================================================
