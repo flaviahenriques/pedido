@@ -5,6 +5,7 @@ from supabase import create_client
 import base64
 import requests
 from io import BytesIO
+import uuid
 
 # #########################################################
 # 1) CONFIGURAÇÕES E CONEXÃO
@@ -24,33 +25,45 @@ if "edit_id" not in st.session_state: st.session_state.edit_id = None
 
 @st.cache_data(show_spinner=False)
 def transformar_url_em_base64(url):
-    """ Baixa a foto da URL e converte em Base64 com Cache para evitar 'piscadas' """
+    """ Baixa a foto da URL e converte em Base64 para o PDF """
     if not url or not str(url).startswith("http"):
         return url
     try:
         headers = {'User-Agent': 'Mozilla/5.0'}
-        res = requests.get(url, headers=headers, timeout=10)
+        res = requests.get(url, headers=headers, timeout=15)
         if res.status_code == 200:
             content_type = res.headers.get('content-type', 'image/png')
             b64 = base64.b64encode(res.content).decode()
             return f"data:{content_type};base64,{b64}"
-    except Exception as e:
-        return "https://via.placeholder.com/400x300?text=Erro+no+Link"
+    except:
+        return url
     return url
 
-def carregar_imagem_base64(foto_obj):
-    """ Gerencia se a foto vem de upload novo ou se já é base64/url """
-    url_at = foto_obj.get('url_foto')
-    
-    # Se já for Base64, retorna direto (evita reprocessamento)
-    if url_at and str(url_at).startswith("data:image"):
-        return url_at
-    
-    # Se for uma URL vinda do banco, usa a função com cache
-    if url_at and str(url_at).startswith("http"):
-        return transformar_url_em_base64(url_at)
-        
-    return "https://via.placeholder.com/400x300?text=Imagem+Nao+Encontrada"
+def upload_imagem_supabase(foto_obj):
+    """ Faz o upload real da imagem para o Storage e retorna a URL pública """
+    try:
+        # Se já for uma URL do Supabase, não faz upload de novo
+        if "url_foto" in foto_obj and str(foto_obj['url_foto']).startswith("http"):
+            return foto_obj['url_foto']
+            
+        if 'file' in foto_obj:
+            file_content = foto_obj['file'].getvalue()
+            file_ext = foto_obj['file'].name.split('.')[-1]
+            file_name = f"{uuid.uuid4()}.{file_ext}"
+            
+            # Caminho no Bucket 'fotos_orcamentos'
+            bucket_name = "fotos_orcamentos"
+            
+            # Upload para o Storage
+            supabase.storage.from_(bucket_name).upload(file_name, file_content)
+            
+            # Gerar URL Pública
+            res = supabase.storage.from_(bucket_name).get_public_url(file_name)
+            return res
+    except Exception as e:
+        st.error(f"Erro no Upload: {e}")
+        return None
+    return None
 
 # =========================================================
 # 2) DESIGN DA PROPOSTA
@@ -67,10 +80,20 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
         fotos_html += '<b class="secao-titulo">4. RELATÓRIO FOTOGRÁFICO</b>'
         fotos_html += '<div style="display: flex; flex-wrap: wrap; gap: 2%; margin-top: 15px;">'
         for f in lista_fotos:
-            img_src = carregar_imagem_base64(f)
+            # Para o PDF, precisamos de Base64. Se for URL, converte. Se for novo upload, pega o file.
+            img_src = ""
+            if f.get('url_foto') and str(f['url_foto']).startswith("data:image"):
+                img_src = f['url_foto']
+            elif f.get('url_foto') and str(f['url_foto']).startswith("http"):
+                img_src = transformar_url_em_base64(f['url_foto'])
+            elif 'file' in f:
+                b64 = base64.b64encode(f['file'].getvalue()).decode()
+                img_src = f"data:image/png;base64,{b64}"
+
             fotos_html += f"""
             <div style="width: 48%; margin-bottom:20px; page-break-inside: avoid;">
                 <img src="{img_src}" 
+                     onerror="this.src='https://via.placeholder.com/400x300?text=Imagem+Nao+Disponivel';"
                      style="width:100%; height:250px; object-fit: cover; border:1px solid #ddd; border-radius:5px;">
                 <p style="text-align:center; font-size:11px; font-weight:bold; color:#002d5b; margin-top:5px;">{f.get('nome','Item')}</p>
             </div>"""
@@ -186,43 +209,26 @@ with st.sidebar:
         st.rerun()
 
 if menu == "Gerenciar Pedidos":
-    st.header("📋 Histórico de Pedidos")
+    st.header("📋 Gerenciar Pedidos")
     pedidos = supabase.table("orcamentos").select("*").order("id", desc=True).execute().data
     
-    lista_cli = sorted(list(set([p['cliente_razao_social'] for p in pedidos if p['cliente_razao_social']])))
-    filtro = st.selectbox("Filtrar por Cliente", ["Todos"] + lista_cli)
-    
     for p in pedidos:
-        if filtro != "Todos" and p['cliente_razao_social'] != filtro:
-            continue
-            
         with st.expander(f"ID {str(p['id']).zfill(4)} - {p['cliente_razao_social']}"):
-            st.write(f"**Empreendimento:** {p['empreendimento']}")
-            st.write(f"**Valor:** R$ {p['valor_total']:,.2f}")
-            
-            if st.button("📝 Editar Orçamento", key=f"btn_ed_{p['id']}"):
+            if st.button("📝 Editar", key=f"ed_{p['id']}"):
                 st.session_state.edit_id = p['id']
-                # Busca itens e fotos
+                # Puxa dados do banco
                 it_db = supabase.table("itens_orcamento").select("*").eq("orcamento_id", p['id']).execute().data
                 ft_db = supabase.table("fotos_relatorio").select("*").eq("orcamento_id", p['id']).execute().data
                 
                 st.session_state.itens = [{"serv": i['servico'], "qtd": i['quantidade'], "total": i['valor_total']} for i in it_db]
-                
-                # Carrega fotos já convertendo para Base64 para evitar problemas no PDF
-                fotos_carregadas = []
-                with st.spinner("Preparando imagens..."):
-                    for f in ft_db:
-                        # Usamos a função de cache aqui
-                        b64 = transformar_url_em_base64(f['url_foto'])
-                        fotos_carregadas.append({"url_foto": b64, "nome": f['nome_item']})
-                
-                st.session_state.fotos = fotos_carregadas
+                # Carrega as URLs reais do banco para o state
+                st.session_state.fotos = [{"url_foto": f['url_foto'], "nome": f['nome_item']} for f in ft_db]
                 st.rerun()
 
 else:
     st.header("📑 " + ("Editando Proposta" if st.session_state.edit_id else "Nova Proposta"))
     
-    # Busca clientes para o auto-complete
+    # Busca clientes para auto-complete
     dados_memo = supabase.table("orcamentos").select("cliente_razao_social, cliente_cnpj, empreendimento, localizacao, aos_cuidados").execute().data
     clientes_memo = {d['cliente_razao_social']: d for d in dados_memo if d['cliente_razao_social']}
 
@@ -246,16 +252,7 @@ else:
 
     with st.expander("2. Escopo Técnico", expanded=True):
         p_esc = esc_db.split("|||")
-        # Preenchimento padrão se for novo
-        if not st.session_state.edit_id and (len(p_esc) < 2 or p_esc[0].strip() == ""):
-            p_esc = [
-                "A PROFIX atuará com foco na preservação do padrão estético...",
-                "A PROFIX assume o fornecimento integral de todos os materiais...",
-                "Perfil da Equipe: Os serviços são executados por profissionais capacitados...",
-                "<b>CONDIÇÕES COMERCIAIS</b><br>Vigência do Contrato: 12 meses..."
-            ]
         while len(p_esc) < 4: p_esc.append("")
-        
         t1 = st.text_area("1. Metodologia", value=p_esc[0], height=300)
         t2 = st.text_area("2. Materiais", value=p_esc[1], height=200)
         t3 = st.text_area("3. Atendimento", value=p_esc[2], height=150)
@@ -266,80 +263,58 @@ else:
         up_f = st.file_uploader("Subir Fotos", accept_multiple_files=True)
         if up_f and st.button("🪄 Processar Fotos"):
             for f in up_f:
-                conteudo = f.getvalue()
-                b64 = base64.b64encode(conteudo).decode()
-                ext = f.name.split('.')[-1].lower()
                 nome_limpo = f.name.rsplit('.', 1)[0].replace('_', ' ').title()
-                st.session_state.fotos.append({
-                    "url_foto": f"data:image/{ext};base64,{b64}", 
-                    "nome": nome_limpo
-                })
+                st.session_state.fotos.append({"file": f, "nome": nome_limpo})
             st.rerun()
         
-        # Grid de fotos
         for idx, f in enumerate(st.session_state.fotos):
             cc1, cc2, cc3 = st.columns([1, 4, 0.5])
-            cc1.image(f.get('url_foto'), width=120)
-            f['nome'] = cc2.text_input(f"Legenda {idx+1}", f['nome'], key=f"f_txt_{idx}")
-            if cc3.button("🗑️", key=f"del_f_{idx}"):
-                st.session_state.fotos.pop(idx)
-                st.rerun()
+            # Preview da imagem (URL ou File)
+            preview = f.get('url_foto') if f.get('url_foto') else f.get('file')
+            if preview: cc1.image(preview, width=120)
+            f['nome'] = cc2.text_input(f"Legenda {idx}", f['nome'], key=f"f_txt_{idx}")
+            if cc3.button("🗑️", key=f"del_f_{idx}"): st.session_state.fotos.pop(idx); st.rerun()
 
         st.divider()
         ci1, ci2, ci3 = st.columns([3, 1, 1])
-        it_n = ci1.text_input("Serviço / Item")
-        it_q = ci2.number_input("Qtd", min_value=1, value=1)
-        it_v = ci3.number_input("Preço Unitário", min_value=0.0, format="%.2f")
-        
-        if st.button("➕ Adicionar Item na Tabela"):
-            if it_n:
-                st.session_state.itens.append({"serv": it_n, "qtd": it_q, "total": it_q * it_v})
-                st.rerun()
+        it_n, it_q, it_v = ci1.text_input("Serviço"), ci2.number_input("Qtd", 1), ci3.number_input("Preço Unitário", 0.0)
+        if st.button("➕ Adicionar Item"):
+            st.session_state.itens.append({"serv": it_n, "qtd": it_q, "total": it_q * it_v}); st.rerun()
         
         for i_idx, it in enumerate(st.session_state.itens):
             c_it1, c_it2, c_it3 = st.columns([4, 1, 0.5])
             c_it1.write(f"**{it['serv']}** (x{it['qtd']})")
             c_it2.write(f"R$ {it['total']:,.2f}")
-            if c_it3.button("❌", key=f"del_it_{i_idx}"):
-                st.session_state.itens.pop(i_idx)
-                st.rerun()
+            if c_it3.button("❌", key=f"del_it_{i_idx}"): st.session_state.itens.pop(i_idx); st.rerun()
 
     total_proposta = sum(i['total'] for i in st.session_state.itens)
     
-    if st.button("💾 SALVAR E GERAR ORÇAMENTO", type="primary", use_container_width=True):
-        payload = {
-            "cliente_razao_social": razao, 
-            "cliente_cnpj": cnpj_val, 
-            "empreendimento": emp_val, 
-            "localizacao": loc_val, 
-            "aos_cuidados": ac_val, 
-            "valor_total": total_proposta, 
-            "metodologia_escopo": escopo_final, 
-            "status": "Enviado"
-        }
-        
-        if st.session_state.edit_id:
-            oid = st.session_state.edit_id
-            supabase.table("orcamentos").update(payload).eq("id", oid).execute()
-            supabase.table("itens_orcamento").delete().eq("orcamento_id", oid).execute()
-            supabase.table("fotos_relatorio").delete().eq("orcamento_id", oid).execute()
-        else:
-            res = supabase.table("orcamentos").insert(payload).execute()
-            oid = res.data[0]['id']
-            st.session_state.edit_id = oid
-
-        for i in st.session_state.itens: 
-            supabase.table("itens_orcamento").insert({"orcamento_id": oid, "servico": i['serv'], "quantidade": i['qtd'], "valor_total": i['total']}).execute()
-        
-        for f in st.session_state.fotos: 
-            # Se for base64, salvamos um placeholder no banco para não estourar o limite de texto, 
-            # O ideal futuramente é usar o Storage.
-            url_f = f.get('url_foto') if (str(f.get('url_foto')).startswith("http")) else "https://via.placeholder.com/400x300?text=Imagem+Upload"
-            supabase.table("fotos_relatorio").insert({"orcamento_id": oid, "nome_item": f['nome'], "url_foto": url_f}).execute()
+    if st.button("💾 SALVAR PROPOSTA", type="primary", use_container_width=True):
+        with st.spinner("Salvando e fazendo upload das imagens..."):
+            payload = {"cliente_razao_social": razao, "cliente_cnpj": cnpj_val, "empreendimento": emp_val, "localizacao": loc_val, "aos_cuidados": ac_val, "valor_total": total_proposta, "metodologia_escopo": escopo_final}
             
-        st.success(f"✅ Proposta Salva! ID: {oid}")
+            if st.session_state.edit_id:
+                oid = st.session_state.edit_id
+                supabase.table("orcamentos").update(payload).eq("id", oid).execute()
+                supabase.table("itens_orcamento").delete().eq("orcamento_id", oid).execute()
+                supabase.table("fotos_relatorio").delete().eq("orcamento_id", oid).execute()
+            else:
+                res = supabase.table("orcamentos").insert(payload).execute()
+                oid = res.data[0]['id']
+                st.session_state.edit_id = oid
+
+            for i in st.session_state.itens: 
+                supabase.table("itens_orcamento").insert({"orcamento_id": oid, "servico": i['serv'], "quantidade": i['qtd'], "valor_total": i['total']}).execute()
+            
+            for f in st.session_state.fotos: 
+                # AQUI ESTÁ A MÁGICA: Ele faz o upload real pro Storage antes de salvar a URL no banco
+                url_final = upload_imagem_supabase(f)
+                if url_final:
+                    supabase.table("fotos_relatorio").insert({"orcamento_id": oid, "nome_item": f['nome'], "url_foto": url_final}).execute()
+            
+            st.success(f"✅ Proposta Salva! ID: {oid}")
+            st.rerun()
 
     st.divider()
-    # GERAÇÃO DO HTML PARA O PDF
     html_gerado = montar_layout_proposta(st.session_state.edit_id, razao, cnpj_val, emp_val, loc_val, ac_val, escopo_final, st.session_state.itens, st.session_state.fotos, total_proposta)
     st.components.v1.html(html_gerado, height=1200, scrolling=True)
