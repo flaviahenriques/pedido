@@ -23,28 +23,32 @@ if "fotos" not in st.session_state: st.session_state.fotos = []
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 
 def carregar_imagem_base64(foto_obj):
-    # CORREÇÃO: Se for URL do banco, baixa e converte para Base64 para não quebrar no PDF
+    """
+    Converte fotos (URL ou Upload) em Base64 para evitar 'ícone rasgado' no PDF.
+    """
     if foto_obj.get('url_foto') and foto_obj['url_foto'].startswith("http"):
         try:
             res = requests.get(foto_obj['url_foto'], timeout=10)
             if res.status_code == 200:
                 base64_img = base64.b64encode(res.content).decode()
-                ext = foto_obj['url_foto'].split('.')[-1].split('?')[0] or "png"
+                ext = "jpeg" if "jpg" in foto_obj['url_foto'].lower() else "png"
                 return f"data:image/{ext};base64,{base64_img}"
-            return foto_obj['url_foto']
         except:
             return foto_obj['url_foto']
             
     try:
-        conteudo = foto_obj['file'].getvalue()
-        base64_img = base64.b64encode(conteudo).decode()
-        ext = foto_obj['file'].name.split('.')[-1]
-        return f"data:image/{ext};base64,{base64_img}"
+        if 'file' in foto_obj:
+            conteudo = foto_obj['file'].getvalue()
+            base64_img = base64.b64encode(conteudo).decode()
+            ext = foto_obj['file'].name.split('.')[-1]
+            return f"data:image/{ext};base64,{base64_img}"
     except:
-        return "https://via.placeholder.com/400x300?text=Erro+na+Imagem"
+        pass
+    
+    return "https://via.placeholder.com/400x300?text=Imagem+Indisponivel"
 
 # =========================================================
-# 2) DESIGN DA PROPOSTA (CAPA CORPORATIVA ADICIONADA)
+# 2) DESIGN DA PROPOSTA
 # =========================================================
 def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados, escopo, lista_itens, lista_fotos, valor_total):
     data_hoje = datetime.now().strftime("%d/%m/%Y")
@@ -80,8 +84,6 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                 .secao-titulo {{ color:#002d5b; font-size:14px; text-transform: uppercase; margin-top: 30px; display:block; border-bottom: 2px solid #002d5b; padding-bottom:5px; font-weight: bold; }}
                 .texto {{ text-align: justify; font-size: 13px; white-space: pre-wrap; margin-top:10px; line-height:1.5; color: #444; }}
                 .conteudo-pagina {{ padding: 40px 50px; page-break-before: always; }}
-                
-                /* ESTILO DA CAPA PROFISSIONAL */
                 .capa-container {{ height: 29.7cm; width: 21cm; display: flex; page-break-after: always; background-color: white; }}
                 .capa-sidebar {{ width: 60px; background-color: #002d5b; height: 100%; }}
                 .capa-main {{ flex: 1; padding: 80px 60px; display: flex; flex-direction: column; justify-content: space-between; }}
@@ -142,30 +144,22 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                     </td>
                 </tr>
             </table>
-            
-            <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-size:18px; font-weight:bold;">
-                PROPOSTA TÉCNICA COMERCIAL
-            </div>
+            <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-size:18px; font-weight:bold;">PROPOSTA TÉCNICA COMERCIAL</div>
             <div style="display:flex; justify-content:space-between; margin-top:5px; font-size:12px; font-weight:bold; color:#002d5b;">
                 <span>ORÇAMENTO Nº: {num_exibicao}</span>
                 <span>Rio de Janeiro, {data_hoje}</span>
             </div>
-            
             <div style="border:1px solid #002d5b; padding:12px; margin-top:10px; margin-bottom:15px; font-size:13px; display:flex;">
                 <div style="flex:1;"><b>CLIENTE:</b> {r_social}<br><b>CNPJ:</b> {cnpj_val}</div>
                 <div style="flex:1; border-left: 1px solid #002d5b; padding-left:15px;"><b>EMPREENDIMENTO:</b> {empreend}<br><b>A/C:</b> {cuidados}</div>
             </div>
-
             <b class="secao-titulo">1. METODOLOGIA E ESCOPO TÉCNICO</b><div class="texto">{s1}</div>
             <b class="secao-titulo">2. MATERIAIS INCLUSOS</b><div class="texto">{s2}</div>
             <b class="secao-titulo">3. ATENDIMENTO E SUPORTE</b><div class="texto">{s3}</div>
-            
             {fotos_html}
-
             <div style="page-break-inside: avoid;">
                 <b class="secao-titulo">5. DETALHAMENTO DE INVESTIMENTO</b>
                 <div style="margin-top:10px;">{itens_html}</div>
-                
                 <div style="margin-top:30px; display:flex; justify-content:space-between; align-items:flex-start;">
                     <div style="font-size:11px; color:#555; flex:1; padding-right: 20px;">{s4}</div>
                     <div style="background:#f1f4f9 !important; padding:20px; border-left:8px solid #002d5b; text-align:right; min-width:260px;">
@@ -180,7 +174,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
 
 # =========================================================
 # 3) INTERFACE
-# =================================########################
+# =========================================================
 with st.sidebar:
     st.image("https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix", width=180)
     st.title("🛡️ Painel PROFIX")
@@ -201,14 +195,12 @@ if menu == "Gerenciar Pedidos":
                 st.session_state.edit_id = p['id']
                 it_db = supabase.table("itens_orcamento").select("*").eq("orcamento_id", p['id']).execute().data
                 ft_db = supabase.table("fotos_relatorio").select("*").eq("orcamento_id", p['id']).execute().data
-                
                 st.session_state.itens = [{"serv": i['servico'], "qtd": i['quantidade'], "total": i['valor_total']} for i in it_db]
                 st.session_state.fotos = [{"url_foto": f['url_foto'], "nome": f['nome_item']} for f in ft_db]
                 st.rerun()
 
 else:
     st.header("📑 " + ("Editando Proposta" if st.session_state.edit_id else "Nova Proposta"))
-    
     dados_memo = supabase.table("orcamentos").select("cliente_razao_social, cliente_cnpj, empreendimento, localizacao, aos_cuidados").execute().data
     clientes_memo = {d['cliente_razao_social']: d for d in dados_memo if d['cliente_razao_social']}
 
@@ -230,7 +222,6 @@ else:
 
     with st.expander("2. Escopo Técnico", expanded=True):
         p_esc = esc_db.split("|||")
-        
         if not st.session_state.edit_id and (len(p_esc) < 2 or p_esc[0] == ""):
             p_esc = [
                 """A PROFIX atuará com foco na preservação do padrão estético e na manutenção da integridade das instalações, assegurando que os apartamentos decorados e estandes de vendas mantenham-se em estado de 'novo' e prontos para visitação. Nossa metodologia prioriza a conservação detalhada para que o ambiente reflita fielmente a qualidade do projeto original, compreendendo:
@@ -253,7 +244,6 @@ Zelo com Inox e Metais: Limpeza técnica e conservação estética de portas de 
 Este escopo não contempla: manutenção mecânica/eletrônica de ar-condicionado (apenas filtros e drenos), reposição de vidros/espelhos, manutenção mecânica de elevadores, reformas estruturais, limpeza de fachadas ou reparos em mobiliário solto/decoração.
 
 Objetivo: Manter a infraestrutura operacional e estética em nível de excelência, permitindo que o foco total do visitante esteja na qualidade e nos detalhes do imóvel.""",
-
                 """A PROFIX assume o fornecimento integral de todos os materiais de consumo e peças de reposição necessários para a execução dos serviços descritos nesta proposta. Nossa logística de suprimentos segue critérios rigorosos para garantir a integridade do projeto e a valorização do imóvel:
 
 Critério de Substituição e Fidelidade: Na manutenção de qualquer componente, seguiremos rigorosamente o padrão da peça já instalada no local. A prioridade será total para a mesma marca e referência do projeto original.
@@ -267,7 +257,6 @@ Critério de Retoque e Pintura Geral: A proposta contempla o retoque pontual. Ca
 Principais insumos cobertos: Componentes de iluminação LED (lâmpadas, fitas, reatores), dispositivos elétricos (tomadas, interruptores), vedações (silicones, rejuntes), hidráulica (reparos de válvulas, engates) e materiais de acabamento (tinta, massas, lixas, seladores).
 
 Logística: A gestão de compra e entrega dos insumos é de inteira responsabilidade da PROFIX, garantindo agilidade imediata nos reparos.""",
-
                 """Perfil da Equipe: Os serviços são executados por profissionais capacitados para atuar em ambientes de alto padrão. Priorizamos a organização e a limpeza absoluta do local após cada intervenção, preservando a integridade do mobiliário decorativo e a estética do projeto.
 
 Gestão por Relatórios Digitais: Após cada manutenção, será enviado um Relatório Fotográfico detalhado (antes e depois). Este documento garante o controle da construtora sobre a preservação do seu patrimônio e serve como histórico técnico das instalações.
@@ -275,7 +264,6 @@ Gestão por Relatórios Digitais: Após cada manutenção, será enviado um Rela
 Respeito ao Fluxo de Vendas: As visitas e intervenções serão coordenadas com a administração do estande para não interferir nos horários de maior fluxo de clientes, mantendo o ambiente sempre pronto para recepção.
 
 Compromisso de Agilidade: A PROFIX estabelece o prazo máximo de 48 horas para o atendimento e resolução de chamados após a abertura da solicitaçao.""",
-
                 """<b>CONDIÇÕES COMERCIAIS</b><br>
 Vigência do Contrato: 12 (doze) meses, garantindo a manutenção contínua e a preservação do padrão estético do patrimônio durante o ciclo de exposição.
 
@@ -287,7 +275,6 @@ Serviços Extraordinários: Demandas que excedam os limites de metragem estipula
 
 Validade da Proposta: 30 dias."""
             ]
-
         while len(p_esc) < 4: p_esc.append("")
         t1 = st.text_area("1. Metodologia", value=p_esc[0], height=400)
         t2 = st.text_area("2. Materiais", value=p_esc[1], height=300)
@@ -302,32 +289,23 @@ Validade da Proposta: 30 dias."""
                 nome_limpo = f.name.rsplit('.', 1)[0].replace('_', ' ').title()
                 st.session_state.fotos.append({"file": f, "nome": nome_limpo})
             st.rerun()
-        
         for idx, f in enumerate(st.session_state.fotos):
             cc1, cc2, cc3 = st.columns([1, 4, 0.5])
-            img_preview = f.get('url_foto') if f.get('url_foto') else f.get('file')
-            if img_preview:
-                cc1.image(img_preview, width=60)
-            
+            img_p = f.get('url_foto') if f.get('url_foto') else f.get('file')
+            if img_p: cc1.image(img_p, width=60)
             f['nome'] = cc2.text_input(f"Legenda {idx+1}", f['nome'], key=f"f_txt_{idx}")
             if cc3.button("🗑️", key=f"del_f_{idx}"): st.session_state.fotos.pop(idx); st.rerun()
-
         st.divider()
         ci1, ci2, ci3 = st.columns([3, 1, 1])
-        it_n = ci1.text_input("Serviço")
-        it_q = ci2.number_input("Qtd", min_value=1, value=1)
-        it_v = ci3.number_input("Preço Unitário", min_value=0.0)
+        it_n, it_q, it_v = ci1.text_input("Serviço"), ci2.number_input("Qtd", 1), ci3.number_input("Unitário", 0.0)
         if st.button("➕ Adicionar Item"):
             st.session_state.itens.append({"serv": it_n, "qtd": it_q, "total": it_q * it_v}); st.rerun()
-        
         for i_idx, it in enumerate(st.session_state.itens):
             c_it1, c_it2, c_it3 = st.columns([4, 1, 0.5])
-            c_it1.write(f"**{it['serv']}** (x{it['qtd']})")
-            c_it2.write(f"R$ {it['total']:,.2f}")
+            c_it1.write(f"**{it['serv']}** (x{it['qtd']})"); c_it2.write(f"R$ {it['total']:,.2f}")
             if c_it3.button("❌", key=f"del_it_{i_idx}"): st.session_state.itens.pop(i_idx); st.rerun()
 
     total_proposta = sum(i['total'] for i in st.session_state.itens)
-    
     if st.button("💾 SALVAR PROPOSTA", type="primary", use_container_width=True):
         payload = {"cliente_razao_social": razao, "cliente_cnpj": cnpj_val, "empreendimento": emp_val, "localizacao": loc_val, "aos_cuidados": ac_val, "valor_total": total_proposta, "metodologia_escopo": escopo_final, "status": "Enviado"}
         if st.session_state.edit_id:
@@ -338,14 +316,12 @@ Validade da Proposta: 30 dias."""
         else:
             res = supabase.table("orcamentos").insert(payload).execute(); oid = res.data[0]['id']
             st.session_state.edit_id = oid
-
         for i in st.session_state.itens: supabase.table("itens_orcamento").insert({"orcamento_id": oid, "servico": i['serv'], "quantidade": i['qtd'], "valor_total": i['total']}).execute()
         for f in st.session_state.fotos: 
-            url_f = f.get('url_foto', 'https://via.placeholder.com/400x300?text=Foto+Salva')
+            url_f = f.get('url_foto', 'https://via.placeholder.com/400x300')
             supabase.table("fotos_relatorio").insert({"orcamento_id": oid, "nome_item": f['nome'], "url_foto": url_f}).execute()
-        st.success(f"✅ Proposta Salva! Número: {str(oid).zfill(4)}")
+        st.success(f"✅ Salvo! ID: {str(oid).zfill(4)}")
 
     st.divider()
-    st.subheader("👁️ Pré-visualização")
     html_gerado = montar_layout_proposta(st.session_state.edit_id, razao, cnpj_val, emp_val, loc_val, ac_val, escopo_final, st.session_state.itens, st.session_state.fotos, total_proposta)
     st.components.v1.html(html_gerado, height=1200, scrolling=True)
