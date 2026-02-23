@@ -56,7 +56,7 @@ def upload_imagem_supabase(foto_obj):
     return None
 
 # =========================================================
-# 2) DESIGN DA PROPOSTA (CORREÇÃO FINAL DE MARGENS)
+# 2) DESIGN DA PROPOSTA (CORREÇÃO DE MARGENS REAIS)
 # =========================================================
 def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados, escopo, lista_itens, lista_fotos, valor_total):
     data_hoje = datetime.now().strftime("%d/%m/%Y")
@@ -91,21 +91,28 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
     <html>
     <head>
         <style>
+            /* CONFIGURAÇÃO DE IMPRESSÃO A4 */
+            @page {{
+                size: A4;
+                margin: 2.5cm 2cm 2cm 2cm; /* Margem Superior maior para o logo não grudar */
+            }}
+
             @media all {{
                 body {{ 
                     font-family: 'Segoe UI', Arial, sans-serif; 
-                    color: #333; margin: 0; padding: 0; 
-                    -webkit-print-color-adjust: exact !important; 
+                    color: #333; 
+                    margin: 0; 
+                    padding: 0;
+                    line-height: 1.5;
                 }}
                 .no-print {{ 
-                    background-color: #002d5b; color: white; padding: 12px 24px; 
-                    border: none; border-radius: 4px; cursor: pointer; margin: 20px; 
+                    background-color: #002d5b; color: white; padding: 12px 24px; border: none; 
+                    border-radius: 4px; cursor: pointer; margin: 20px; font-weight: bold; 
                 }}
                 
-                /* Margens do Conteúdo */
-                .conteudo-pagina {{ 
-                    padding: 40px 0; /* Espaçamento interno */
-                    page-break-before: always; 
+                /* Container principal que respeita as margens da página */
+                .page-content {{
+                    width: 100%;
                 }}
 
                 .secao-titulo {{ 
@@ -115,77 +122,80 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                 }}
                 .texto {{ 
                     text-align: justify; font-size: 13px; white-space: pre-wrap; 
-                    margin-top:10px; line-height:1.5; color: #444; 
+                    margin-top:10px; color: #444; 
                 }}
                 
-                /* Estilos da Capa */
-                .capa-container {{ height: 28cm; width: 100%; display: flex; page-break-after: always; }}
-                .capa-sidebar {{ width: 50px; background-color: #002d5b; height: 100%; }}
-                .capa-main {{ flex: 1; padding: 60px 40px; display: flex; flex-direction: column; justify-content: space-between; }}
-                .capa-titulo {{ font-size: 48px; color: #002d5b; font-weight: 800; margin: 0; line-height: 1.1; }}
-            }}
-
-            /* CONFIGURAÇÃO DE IMPRESSÃO - CORRIGE O TOPO GRUDADO */
-            @page {{ 
-                size: A4; 
-                margin: 2cm 1.5cm 1.5cm 1.5cm; /* Margem superior de 2cm para não grudar no topo */
+                /* Estilos da Capa - Ajustada para não sangrar */
+                .capa-container {{ 
+                    height: 25cm; /* Menor que o A4 para caber entre as margens */
+                    display: flex; 
+                    page-break-after: always;
+                }}
+                .capa-sidebar {{ width: 40px; background-color: #002d5b; }}
+                .capa-main {{ flex: 1; padding-left: 40px; display: flex; flex-direction: column; justify-content: space-between; }}
+                .capa-titulo {{ font-size: 44px; color: #002d5b; font-weight: 800; margin: 0; }}
             }}
 
             @media print {{ 
                 .no-print {{ display: none !important; }}
-                .capa-container {{ height: 26cm; }} /* Ajuste para não quebrar página na capa */
+                body {{ background: none; }}
             }}
         </style>
     </head>
     <body>
-        <button class="no-print" onclick="window.print()">🖨️ GERAR PDF (Ajustado)</button>
+        <button class="no-print" onclick="window.print()">🖨️ IMPRIMIR / SALVAR PDF</button>
         
         <div class="capa-container">
             <div class="capa-sidebar"></div>
             <div class="capa-main">
                 <div>
                     <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="220">
-                    <div style="margin-top: 80px;">
+                    <div style="margin-top: 100px;">
                         <h1 class="capa-titulo">PROPOSTA<br>TÉCNICA</h1>
-                        <div style="font-size: 18px; color: #666; text-transform: uppercase; letter-spacing: 4px; margin-top: 10px;">Manutenção e Facilities</div>
+                        <p style="font-size: 18px; color: #666; text-transform: uppercase; letter-spacing: 4px;">Manutenção e Facilities</p>
                     </div>
                 </div>
-                <div style="margin-bottom: 100px;">
-                    <span style="color: #002d5b; font-size: 12px; font-weight: bold; text-transform: uppercase;">Preparado para:</span><br>
-                    <span style="font-size: 24px; color: #333; margin-bottom: 25px; display: block;"><b>{r_social}</b></span>
-                    <span style="color: #002d5b; font-size: 12px; font-weight: bold; text-transform: uppercase;">Referência:</span><br>
-                    <span style="font-size: 18px; color: #333;">ORÇAMENTO #{num_exibicao}</span>
+                <div>
+                    <p style="color: #002d5b; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom:0;">Preparado para:</p>
+                    <p style="font-size: 22px; color: #333; margin-top:5px;"><b>{r_social}</b></p>
+                    <p style="color: #002d5b; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom:0;">Empreendimento:</p>
+                    <p style="font-size: 18px; color: #333; margin-top:5px;">{empreend}</p>
                 </div>
                 <div style="font-size: 14px; color: #888; border-top: 1px solid #eee; padding-top: 20px;">
-                    Rio de Janeiro, {data_hoje}
+                    Rio de Janeiro, {data_hoje} | ORÇAMENTO #{num_exibicao}
                 </div>
             </div>
         </div>
 
-        <div class="conteudo-pagina">
+        <div class="page-content" style="page-break-before: always;">
             <table style="width:100%; border-collapse: collapse; margin-bottom: 30px;">
                 <tr>
-                    <td style="width:35%; vertical-align: middle;">
+                    <td style="width:35%;">
                         <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="180">
                     </td>
-                    <td style="width:65%; text-align:right; vertical-align: middle; font-size:10px; line-height: 1.4; color: #666;">
+                    <td style="width:65%; text-align:right; font-size:10px; color: #666;">
                         <b style="color:#002d5b; font-size:11px;">PROFIX GESTÃO DE FACILITIES</b><br>
                         CNPJ: 52.620.102/0001-03<br>
-                        Tel: 21 3609-1314 | www.profixmanutencao.com
+                        atendimento@profixmanutencao.com | www.profixmanutencao.com
                     </td>
                 </tr>
             </table>
             
-            <div style="background:#002d5b !important; color:white !important; text-align:center; padding:15px; font-size:18px; font-weight:bold; margin-bottom: 20px;">DETALHAMENTO DA PROPOSTA</div>
+            <div style="background:#002d5b; color:white; text-align:center; padding:12px; font-size:18px; font-weight:bold; margin-bottom: 25px;">PROPOSTA TÉCNICA COMERCIAL</div>
             
-            <div style="border:1px solid #eee; padding:20px; margin-bottom:20px; font-size:13px; background: #fafafa;">
-                <div style="margin-bottom: 10px;"><b>CLIENTE:</b> {r_social} | <b>CNPJ:</b> {cnpj_val}</div>
-                <div><b>EMPREENDIMENTO:</b> {empreend}</div>
+            <div style="border:1px solid #002d5b; padding:15px; margin-bottom:25px; font-size:13px; display:flex; gap: 20px;">
+                <div style="flex:1;"><b>CLIENTE:</b> {r_social}<br><b>CNPJ:</b> {cnpj_val}</div>
+                <div style="flex:1;"><b>EMPREENDIMENTO:</b> {empreend}<br><b>A/C:</b> {cuidados}</div>
             </div>
 
-            <b class="secao-titulo">1. METODOLOGIA E ESCOPO TÉCNICO</b><div class="texto">{s1}</div>
-            <b class="secao-titulo">2. MATERIAIS INCLUSOS</b><div class="texto">{s2}</div>
-            <b class="secao-titulo">3. ATENDIMENTO E SUPORTE</b><div class="texto">{s3}</div>
+            <b class="secao-titulo">1. METODOLOGIA E ESCOPO TÉCNICO</b>
+            <div class="texto">{s1}</div>
+            
+            <b class="secao-titulo">2. MATERIAIS INCLUSOS</b>
+            <div class="texto">{s2}</div>
+            
+            <b class="secao-titulo">3. ATENDIMENTO E SUPORTE</b>
+            <div class="texto">{s3}</div>
             
             {fotos_html}
 
@@ -193,9 +203,9 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                 <b class="secao-titulo">5. INVESTIMENTO</b>
                 <div style="margin-top:15px;">{itens_html}</div>
                 <div style="margin-top:40px; display:flex; justify-content:space-between; align-items:flex-end;">
-                    <div style="font-size:11px; color:#888; flex:1; padding-right: 40px;">{s4}</div>
-                    <div style="background:#002d5b !important; color: white !important; padding:25px; text-align:right; min-width:250px; border-radius: 5px;">
-                        <small>VALOR TOTAL</small><br>
+                    <div style="font-size:11px; color:#777; flex:1; padding-right: 40px;">{s4}</div>
+                    <div style="background:#002d5b; color:white; padding:25px; text-align:right; min-width:260px; border-radius: 4px;">
+                        <small style="opacity: 0.8;">VALOR TOTAL DO PROJETO</small><br>
                         <b style="font-size:26px;">R$ {valor_total:,.2f}</b>
                     </div>
                 </div>
@@ -203,6 +213,10 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
         </div>
     </body>
     </html>"""
+# =========================================================
+# 3) INTERFACE (MANTIDA IGUAL)
+# =================================########################
+# ... (O restante do código do Streamlit continua o mesmo)
 # =========================================================
 # 3) INTERFACE (MANTIDA IGUAL)
 # =========================================================
