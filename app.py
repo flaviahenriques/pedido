@@ -25,6 +25,7 @@ if "edit_id" not in st.session_state: st.session_state.edit_id = None
 
 @st.cache_data(show_spinner=False)
 def transformar_url_em_base64(url):
+    """ Converte URL do Storage em Base64 para garantir renderização no PDF """
     if not url or not str(url).startswith("http"):
         return url
     try:
@@ -39,14 +40,17 @@ def transformar_url_em_base64(url):
     return url
 
 def upload_imagem_supabase(foto_obj):
+    """ Realiza o upload real para o Bucket 'fotos_orcamentos' """
     try:
         if "url_foto" in foto_obj and str(foto_obj['url_foto']).startswith("http"):
             return foto_obj['url_foto']
+            
         if 'file' in foto_obj:
             file_content = foto_obj['file'].getvalue()
             file_ext = foto_obj['file'].name.split('.')[-1]
             file_name = f"{uuid.uuid4()}.{file_ext}"
             bucket_name = "fotos_orcamentos"
+            
             supabase.storage.from_(bucket_name).upload(file_name, file_content)
             res = supabase.storage.from_(bucket_name).get_public_url(file_name)
             return res
@@ -56,7 +60,7 @@ def upload_imagem_supabase(foto_obj):
     return None
 
 # =========================================================
-# 2) DESIGN DA PROPOSTA (CORREÇÃO DE MARGENS REAIS)
+# 2) DESIGN DA PROPOSTA (INCLUINDO CAPA)
 # =========================================================
 def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados, escopo, lista_itens, lista_fotos, valor_total):
     data_hoje = datetime.now().strftime("%d/%m/%Y")
@@ -91,134 +95,106 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
     <html>
     <head>
         <style>
-            /* CONFIGURAÇÃO DE IMPRESSÃO A4 */
-            @page {{
-                size: A4;
-                margin: 2.5cm 2cm 2cm 2cm; /* Margem Superior maior para o logo não grudar */
-            }}
-
             @media all {{
-                body {{ 
-                    font-family: 'Segoe UI', Arial, sans-serif; 
-                    color: #333; 
-                    margin: 0; 
-                    padding: 0;
-                    line-height: 1.5;
-                }}
-                .no-print {{ 
-                    background-color: #002d5b; color: white; padding: 12px 24px; border: none; 
-                    border-radius: 4px; cursor: pointer; margin: 20px; font-weight: bold; 
-                }}
-                
-                /* Container principal que respeita as margens da página */
-                .page-content {{
-                    width: 100%;
-                }}
-
-                .secao-titulo {{ 
-                    color:#002d5b; font-size:14px; text-transform: uppercase; 
-                    margin-top: 30px; display:block; border-bottom: 2px solid #002d5b; 
-                    padding-bottom:5px; font-weight: bold; 
-                }}
-                .texto {{ 
-                    text-align: justify; font-size: 13px; white-space: pre-wrap; 
-                    margin-top:10px; color: #444; 
-                }}
-                
-                /* Estilos da Capa - Ajustada para não sangrar */
-                .capa-container {{ 
-                    height: 25cm; /* Menor que o A4 para caber entre as margens */
-                    display: flex; 
-                    page-break-after: always;
-                }}
-                .capa-sidebar {{ width: 40px; background-color: #002d5b; }}
-                .capa-main {{ flex: 1; padding-left: 40px; display: flex; flex-direction: column; justify-content: space-between; }}
-                .capa-titulo {{ font-size: 44px; color: #002d5b; font-weight: 800; margin: 0; }}
+                body {{ font-family: 'Segoe UI', Arial, sans-serif; color: #333; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
+                .no-print {{ background-color: #002d5b; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; margin: 20px; font-weight: bold; }}
+                .secao-titulo {{ color:#002d5b; font-size:14px; text-transform: uppercase; margin-top: 30px; display:block; border-bottom: 2px solid #002d5b; padding-bottom:5px; font-weight: bold; }}
+                .texto {{ text-align: justify; font-size: 13px; white-space: pre-wrap; margin-top:10px; line-height:1.5; color: #444; }}
+                .conteudo-pagina {{ padding: 40px 50px; page-break-before: always; }}
+                /* Estilos da Capa */
+                .capa-container {{ height: 29.7cm; width: 21cm; display: flex; page-break-after: always; background-color: white; }}
+                .capa-sidebar {{ width: 60px; background-color: #002d5b; height: 100%; }}
+                .capa-main {{ flex: 1; padding: 80px 60px; display: flex; flex-direction: column; justify-content: space-between; }}
+                .capa-header {{ border-bottom: 4px solid #002d5b; padding-bottom: 20px; }}
+                .capa-titulo {{ font-size: 48px; color: #002d5b; font-weight: 800; margin: 0; line-height: 1; }}
+                .capa-subtitulo {{ font-size: 18px; color: #666; text-transform: uppercase; letter-spacing: 4px; margin-top: 10px; }}
+                .capa-info {{ margin-top: 80px; }}
+                .capa-label {{ color: #002d5b; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; display: block; }}
+                .capa-valor {{ font-size: 20px; color: #333; margin-bottom: 25px; display: block; }}
+                .capa-footer {{ font-size: 14px; color: #888; border-top: 1px solid #eee; padding-top: 20px; }}
             }}
-
-            @media print {{ 
-                .no-print {{ display: none !important; }}
-                body {{ background: none; }}
-            }}
+            @page {{ size: A4; margin: 0; }}
+            @media print {{ .no-print {{ display: none !important; }} }}
         </style>
     </head>
     <body>
-        <button class="no-print" onclick="window.print()">🖨️ IMPRIMIR / SALVAR PDF</button>
+        <button class="no-print" onclick="window.print()">🖨️ GERAR PDF PROFISSIONAL (COM CAPA)</button>
         
         <div class="capa-container">
             <div class="capa-sidebar"></div>
             <div class="capa-main">
-                <div>
+                <div class="capa-header">
                     <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="220">
-                    <div style="margin-top: 100px;">
+                    <div style="margin-top: 60px;">
                         <h1 class="capa-titulo">PROPOSTA<br>TÉCNICA</h1>
-                        <p style="font-size: 18px; color: #666; text-transform: uppercase; letter-spacing: 4px;">Manutenção e Facilities</p>
+                        <div class="capa-subtitulo">Manutenção e Facilities</div>
                     </div>
                 </div>
-                <div>
-                    <p style="color: #002d5b; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom:0;">Preparado para:</p>
-                    <p style="font-size: 22px; color: #333; margin-top:5px;"><b>{r_social}</b></p>
-                    <p style="color: #002d5b; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom:0;">Empreendimento:</p>
-                    <p style="font-size: 18px; color: #333; margin-top:5px;">{empreend}</p>
+                <div class="capa-info">
+                    <span class="capa-label">Preparado para:</span>
+                    <span class="capa-valor"><b>{r_social}</b></span>
+                    <span class="capa-label">Empreendimento:</span>
+                    <span class="capa-valor">{empreend}</span>
+                    <span class="capa-label">Referência:</span>
+                    <span class="capa-valor">ORÇAMENTO #{num_exibicao}</span>
                 </div>
-                <div style="font-size: 14px; color: #888; border-top: 1px solid #eee; padding-top: 20px;">
-                    Rio de Janeiro, {data_hoje} | ORÇAMENTO #{num_exibicao}
+                <div class="capa-footer">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Rio de Janeiro, {data_hoje}</span>
+                        <span><b>PROFIX</b> | Gestão de Facilities</span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="page-content" style="page-break-before: always;">
-            <table style="width:100%; border-collapse: collapse; margin-bottom: 30px;">
+        <div class="conteudo-pagina">
+            <table style="width:100%; border-collapse: collapse; margin-bottom: 5px;">
                 <tr>
-                    <td style="width:35%;">
-                        <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="180">
+                    <td style="width:35%; vertical-align: middle;">
+                        <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="200">
                     </td>
-                    <td style="width:65%; text-align:right; font-size:10px; color: #666;">
-                        <b style="color:#002d5b; font-size:11px;">PROFIX GESTÃO DE FACILITIES</b><br>
+                    <td style="width:65%; text-align:right; vertical-align: middle; font-size:10px; line-height: 1.5;">
+                        <b style="color:#002d5b; font-size:12px;">PROFIX GESTÃO DE FACILITIES</b><br>
                         CNPJ: 52.620.102/0001-03<br>
-                        atendimento@profixmanutencao.com | www.profixmanutencao.com
+                        Av. Marechal Câmara, 160, Centro, Rio De Janeiro RJ, 20020-907<br>
+                        Tel: 21 3609-1314 | atendimento@profixmanutencao.com<br>
+                        www.profixmanutencao.com
                     </td>
                 </tr>
             </table>
-            
-            <div style="background:#002d5b; color:white; text-align:center; padding:12px; font-size:18px; font-weight:bold; margin-bottom: 25px;">PROPOSTA TÉCNICA COMERCIAL</div>
-            
-            <div style="border:1px solid #002d5b; padding:15px; margin-bottom:25px; font-size:13px; display:flex; gap: 20px;">
+            <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-size:18px; font-weight:bold;">PROPOSTA TÉCNICA COMERCIAL</div>
+            <div style="display:flex; justify-content:space-between; margin-top:5px; font-size:12px; font-weight:bold; color:#002d5b;">
+                <span>ORÇAMENTO Nº: {num_exibicao}</span>
+                <span>Rio de Janeiro, {data_hoje}</span>
+            </div>
+            <div style="border:1px solid #002d5b; padding:12px; margin-top:10px; margin-bottom:15px; font-size:13px; display:flex;">
                 <div style="flex:1;"><b>CLIENTE:</b> {r_social}<br><b>CNPJ:</b> {cnpj_val}</div>
-                <div style="flex:1;"><b>EMPREENDIMENTO:</b> {empreend}<br><b>A/C:</b> {cuidados}</div>
+                <div style="flex:1; border-left: 1px solid #002d5b; padding-left:15px;"><b>EMPREENDIMENTO:</b> {empreend}<br><b>A/C:</b> {cuidados}</div>
             </div>
 
-            <b class="secao-titulo">1. METODOLOGIA E ESCOPO TÉCNICO</b>
-            <div class="texto">{s1}</div>
-            
-            <b class="secao-titulo">2. MATERIAIS INCLUSOS</b>
-            <div class="texto">{s2}</div>
-            
-            <b class="secao-titulo">3. ATENDIMENTO E SUPORTE</b>
-            <div class="texto">{s3}</div>
+            <b class="secao-titulo">1. METODOLOGIA E ESCOPO TÉCNICO</b><div class="texto">{s1}</div>
+            <b class="secao-titulo">2. MATERIAIS INCLUSOS</b><div class="texto">{s2}</div>
+            <b class="secao-titulo">3. ATENDIMENTO E SUPORTE</b><div class="texto">{s3}</div>
             
             {fotos_html}
 
-            <div style="page-break-inside: avoid; margin-top: 40px;">
-                <b class="secao-titulo">5. INVESTIMENTO</b>
-                <div style="margin-top:15px;">{itens_html}</div>
-                <div style="margin-top:40px; display:flex; justify-content:space-between; align-items:flex-end;">
-                    <div style="font-size:11px; color:#777; flex:1; padding-right: 40px;">{s4}</div>
-                    <div style="background:#002d5b; color:white; padding:25px; text-align:right; min-width:260px; border-radius: 4px;">
-                        <small style="opacity: 0.8;">VALOR TOTAL DO PROJETO</small><br>
-                        <b style="font-size:26px;">R$ {valor_total:,.2f}</b>
+            <div style="page-break-inside: avoid;">
+                <b class="secao-titulo">5. DETALHAMENTO DE INVESTIMENTO</b>
+                <div style="margin-top:10px;">{itens_html}</div>
+                <div style="margin-top:30px; display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div style="font-size:11px; color:#555; flex:1; padding-right: 20px;">{s4}</div>
+                    <div style="background:#f1f4f9 !important; padding:20px; border-left:8px solid #002d5b; text-align:right; min-width:260px;">
+                        <small style="color:#666;">VALOR TOTAL DO PROJETO</small><br>
+                        <b style="font-size:26px; color:#002d5b;">R$ {valor_total:,.2f}</b>
                     </div>
                 </div>
             </div>
         </div>
     </body>
     </html>"""
+
 # =========================================================
-# 3) INTERFACE (MANTIDA IGUAL)
-# =================================########################
-# ... (O restante do código do Streamlit continua o mesmo)
-# =========================================================
-# 3) INTERFACE (MANTIDA IGUAL)
+# 3) INTERFACE
 # =========================================================
 with st.sidebar:
     st.image("https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix", width=180)
@@ -269,7 +245,13 @@ else:
         p_esc = esc_db.split("|||")
         if not st.session_state.edit_id and (len(p_esc) < 2 or p_esc[0].strip() == ""):
             p_esc = [
-                """A PROFIX atuará com foco na preservação do padrão estético e na manutenção da integridade das instalações, assegurando que os apartamentos decorados e estandes de vendas mantenham-se em estado de 'novo' e prontos para visitação. Nossa metodologia prioriza a conservação detalhada para que o ambiente reflita fielmente a qualidade do projeto original, compreendendo:
+                """A PROFIX atuará com foco na preservação do padrão estético e na manutenção da integridade das instalações, assegurando que os apartamentos decorados e estandes de vendas mantenham-se em estado de 'novo' e prontos para visitação...""",
+                """A PROFIX assume o fornecimento integral de todos os materiais de consumo e peças de reposição necessários para a execução dos serviços descritos nesta proposta...""",
+                """Perfil da Equipe: Os serviços são executados por profissionais capacitados para atuar em ambientes de alto padrão...""",
+                """<b>CONDIÇÕES COMERCIAIS</b><br>Vigência do Contrato: 12 (doze) meses..."""
+            ]
+            # Redefinindo com os textos full que você enviou
+            p_esc[0] = """A PROFIX atuará com foco na preservação do padrão estético e na manutenção da integridade das instalações, assegurando que os apartamentos decorados e estandes de vendas mantenham-se em estado de 'novo' e prontos para visitação. Nossa metodologia prioriza a conservação detalhada para que o ambiente reflita fielmente a qualidade do projeto original, compreendendo:
 
 Gestão de Iluminação e Atmosfera (Elétrica): Manutenção contínua de todo o sistema de iluminação decorativa e funcional. Realizamos a substituição imediata de lâmpadas e fitas LED, respeitando rigorosamente a temperatura de cor (quente/fria) e a intensidade original do projeto de interiores, garantindo que o ambiente mantenha a atmosfera planejada pelos arquitetos. Cuidamos da funcionalidade e limpeza de tomadas e interruptores.
 
@@ -288,8 +270,8 @@ Zelo com Inox e Metais: Limpeza técnica e conservação estética de portas de 
 
 Este escopo não contempla: manutenção mecânica/eletrônica de ar-condicionado (apenas filtros e drenos), reposição de vidros/espelhos, manutenção mecânica de elevadores, reformas estruturais, limpeza de fachadas ou reparos em mobiliário solto/decoração.
 
-Objetivo: Manter a infraestrutura operacional e estética em nível de excelência, permitindo que o foco total do visitante esteja na qualidade e nos detalhes do imóvel.""",
-                """A PROFIX assume o fornecimento integral de todos os materiais de consumo e peças de reposição necessários para a execução dos serviços descritos nesta proposta. Nossa logística de suprimentos segue critérios rigorosos para garantir a integridade do projeto e a valorização do imóvel:
+Objetivo: Manter a infraestrutura operacional e estética em nível de excelência, permitindo que o foco total do visitante esteja na qualidade e nos detalhes do imóvel."""
+            p_esc[1] = """A PROFIX assume o fornecimento integral de todos os materiais de consumo e peças de reposição necessários para a execução dos serviços descritos nesta proposta. Nossa logística de suprimentos segue critérios rigorosos para garantir a integridade do projeto e a valorização do imóvel:
 
 Critério de Substituição e Fidelidade: Na manutenção de qualquer componente, seguiremos rigorosamente o padrão da peça já instalada no local. A prioridade será total para a mesma marca e referência do projeto original.
 
@@ -301,15 +283,15 @@ Critério de Retoque e Pintura Geral: A proposta contempla o retoque pontual. Ca
 
 Principais insumos cobertos: Componentes de iluminação LED (lâmpadas, fitas, reatores), dispositivos elétricos (tomadas, interruptores), vedações (silicones, rejuntes), hidráulica (reparos de válvulas, engates) e materiais de acabamento (tinta, massas, lixas, seladores).
 
-Logística: A gestão de compra e entrega dos insumos é de inteira responsabilidade da PROFIX, garantindo agilidade imediata nos reparos.""",
-                """Perfil da Equipe: Os serviços são executados por profissionais capacitados para atuar em ambientes de alto padrão. Priorizamos a organização e a limpeza absoluta do local após cada intervenção, preservando a integridade do mobiliário decorativo e a estética do projeto.
+Logística: A gestão de compra e entrega dos insumos é de inteira responsabilidade da PROFIX, garantindo agilidade imediata nos reparos."""
+            p_esc[2] = """Perfil da Equipe: Os serviços são executados por profissionais capacitados para atuar em ambientes de alto padrão. Priorizamos a organização e a limpeza absoluta do local após cada intervenção, preservando a integridade do mobiliário decorativo e a estética do projeto.
 
 Gestão por Relatórios Digitais: Após cada manutenção, será enviado um Relatório Fotográfico detalhado (antes e depois). Este documento garante o controle da construtora sobre a preservação do seu patrimônio e serve como histórico técnico das instalações.
 
 Respeito ao Fluxo de Vendas: As visitas e intervenções serão coordenadas com a administração do estande para não interferir nos horários de maior fluxo de clientes, mantendo o ambiente sempre pronto para recepção.
 
-Compromisso de Agilidade: A PROFIX estabelece o prazo máximo de 48 horas para o atendimento e resolução de chamados após a abertura da solicitação.""",
-                """<b>CONDIÇÕES COMERCIAIS</b><br>Vigência do Contrato: 12 (doze) meses, garantindo a manutenção contínua e a preservação do padrão estético do patrimônio durante o ciclo de exposição.
+Compromisso de Agilidade: A PROFIX estabelece o prazo máximo de 48 horas para o atendimento e resolução de chamados após a abertura da solicitação."""
+            p_esc[3] = """<b>CONDIÇÕES COMERCIAIS</b><br>Vigência do Contrato: 12 (doze) meses, garantindo a manutenção contínua e a preservação do padrão estético do patrimônio durante o ciclo de exposição.
 
 Abrangência: O valor proposto contempla todos os custos diretos e indiretos, incluindo mão de obra especializada, materiais de rotina, encargos trabalhistas, previdenciários, tributos (ISS, PIS, COFINS), seguros e EPIs.
 
@@ -318,7 +300,6 @@ Condição de Pagamento: O faturamento será realizado mensalmente, com vencimen
 Serviços Extraordinários: Demandas que excedam os limites de metragem estipulados no item 1, ou intervenções estruturais de grande porte, serão objeto de orçamento complementar para aprovação prévia.
 
 Validade da Proposta: 30 dias."""
-            ]
 
         while len(p_esc) < 4: p_esc.append("")
         t1 = st.text_area("1. Metodologia", value=p_esc[0], height=350)
@@ -355,7 +336,7 @@ Validade da Proposta: 30 dias."""
     total_proposta = sum(i['total'] for i in st.session_state.itens)
     
     if st.button("💾 SALVAR PROPOSTA COMPLETA", type="primary", use_container_width=True):
-        with st.spinner("Salvando..."):
+        with st.spinner("Sincronizando com o banco e Storage..."):
             payload = {"cliente_razao_social": razao, "cliente_cnpj": cnpj_val, "empreendimento": emp_val, "localizacao": loc_val, "aos_cuidados": ac_val, "valor_total": total_proposta, "metodologia_escopo": escopo_final, "status": "Enviado"}
             if st.session_state.edit_id:
                 oid = st.session_state.edit_id
@@ -368,10 +349,12 @@ Validade da Proposta: 30 dias."""
 
             for i in st.session_state.itens: 
                 supabase.table("itens_orcamento").insert({"orcamento_id": oid, "servico": i['serv'], "quantidade": i['qtd'], "valor_total": i['total']}).execute()
+            
             for f in st.session_state.fotos: 
                 url_final = upload_imagem_supabase(f)
                 if url_final:
                     supabase.table("fotos_relatorio").insert({"orcamento_id": oid, "nome_item": f['nome'], "url_foto": url_final}).execute()
+            
             st.success(f"✅ Proposta {oid} Salva!")
             st.rerun()
 
