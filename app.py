@@ -21,7 +21,6 @@ if "itens" not in st.session_state: st.session_state.itens = []
 if "fotos" not in st.session_state: st.session_state.fotos = []
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 
-# Função auxiliar para converter imagem para Base64 (resolve o erro da imagem rasgada)
 def carregar_imagem_base64(foto_obj):
     if foto_obj.get('url_foto') and foto_obj['url_foto'].startswith("http"):
         return foto_obj['url_foto']
@@ -38,16 +37,20 @@ def carregar_imagem_base64(foto_obj):
 # =========================================================
 def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados, escopo, lista_itens, lista_fotos, valor_total):
     data_hoje = datetime.now().strftime("%d/%m/%Y")
+    ano_atual = datetime.now().year
     
     partes = escopo.split("|||")
     while len(partes) < 4: partes.append("")
     s1, s2, s3, s4 = partes[0], partes[1], partes[2], partes[3]
 
-    # Galeria de Fotos Corrigida
+    # LOGICA DO NUMERO DO ORÇAMENTO (ANO-ID)
+    num_exibicao = f"{ano_atual}-{str(id_orc).zfill(3)}" if id_orc else "PROVISÓRIO"
+
+    # Galeria de Fotos - PADRONIZADO COM O RESTO DO LAYOUT
     fotos_html = ""
     if lista_fotos:
-        fotos_html += "<b style='color:#002d5b; font-size:16px;'>4. RELATÓRIO FOTOGRÁFICO</b><br><br>"
-        fotos_html += '<div style="display: flex; flex-wrap: wrap; gap: 2%;">'
+        fotos_html += f'<b class="secao-titulo">4. RELATÓRIO FOTOGRÁFICO</b>'
+        fotos_html += '<div style="display: flex; flex-wrap: wrap; gap: 2%; margin-top: 15px;">'
         for f in lista_fotos:
             img_src = carregar_imagem_base64(f)
             fotos_html += f"""
@@ -58,7 +61,6 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
         fotos_html += '</div>'
 
     itens_html = "".join([f"<div style='display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:8px 0; font-size:14px;'><span><b>{i['serv'].upper()}</b> (x{i['qtd']})</span><b>R$ {float(i['total']):,.2f}</b></div>" for i in lista_itens])
-    num_exibicao = id_orc if id_orc else "---"
 
     return f"""
     <html>
@@ -67,7 +69,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
             @media all {{
                 body {{ font-family: Arial, sans-serif; color: #333; margin: 0; padding: 20px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
                 .no-print {{ background-color: #002d5b; color: white; padding: 12px; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 20px; font-weight: bold; }}
-                .secao-titulo {{ color:#002d5b; font-size:14px; text-transform: uppercase; margin-top: 20px; display:block; border-bottom: 2px solid #002d5b; padding-bottom:3px; font-weight: bold; }}
+                .secao-titulo {{ color:#002d5b; font-size:14px; text-transform: uppercase; margin-top: 25px; display:block; border-bottom: 2px solid #002d5b; padding-bottom:3px; font-weight: bold; }}
                 .texto {{ text-align: justify; font-size: 13px; white-space: pre-wrap; margin-top:8px; line-height:1.4; }}
             }}
             @page {{ size: A4; margin: 1cm; }}
@@ -109,9 +111,9 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
         <b class="secao-titulo">2. MATERIAIS INCLUSOS</b><div class="texto">{s2}</div>
         <b class="secao-titulo">3. ATENDIMENTO E SUPORTE</b><div class="texto">{s3}</div>
         
-        <div style="margin-top: 20px;">{fotos_html}</div>
+        {fotos_html}
 
-        <div style="page-break-inside: avoid; margin-top: 20px;">
+        <div style="page-break-inside: avoid;">
             <b class="secao-titulo">5. DETALHAMENTO DE INVESTIMENTO</b>
             <div style="margin-top:10px;">{itens_html}</div>
             
@@ -229,7 +231,7 @@ else:
         for f in st.session_state.fotos: 
             url_f = f.get('url_foto', 'https://via.placeholder.com/400x300?text=Foto+Salva')
             supabase.table("fotos_relatorio").insert({"orcamento_id": oid, "nome_item": f['nome'], "url_foto": url_f}).execute()
-        st.success(f"✅ Proposta Salva!")
+        st.success(f"✅ Proposta Salva! Número: {datetime.now().year}-{str(oid).zfill(3)}")
 
     st.divider()
     st.subheader("👁️ Pré-visualização")
