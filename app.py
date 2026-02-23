@@ -25,6 +25,7 @@ if "edit_id" not in st.session_state: st.session_state.edit_id = None
 
 @st.cache_data(show_spinner=False)
 def transformar_url_em_base64(url):
+    """ Converte URL do Storage em Base64 para garantir renderização no PDF """
     if not url or not str(url).startswith("http"):
         return url
     try:
@@ -39,14 +40,17 @@ def transformar_url_em_base64(url):
     return url
 
 def upload_imagem_supabase(foto_obj):
+    """ Realiza o upload real para o Bucket 'fotos_orcamentos' """
     try:
         if "url_foto" in foto_obj and str(foto_obj['url_foto']).startswith("http"):
             return foto_obj['url_foto']
+            
         if 'file' in foto_obj:
             file_content = foto_obj['file'].getvalue()
             file_ext = foto_obj['file'].name.split('.')[-1]
             file_name = f"{uuid.uuid4()}.{file_ext}"
             bucket_name = "fotos_orcamentos"
+            
             supabase.storage.from_(bucket_name).upload(file_name, file_content)
             res = supabase.storage.from_(bucket_name).get_public_url(file_name)
             return res
@@ -56,7 +60,7 @@ def upload_imagem_supabase(foto_obj):
     return None
 
 # =========================================================
-# 2) DESIGN DA PROPOSTA (FORÇANDO MARGENS)
+# 2) DESIGN DA PROPOSTA (INCLUINDO CAPA)
 # =========================================================
 def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados, escopo, lista_itens, lista_fotos, valor_total):
     data_hoje = datetime.now().strftime("%d/%m/%Y")
@@ -91,137 +95,104 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
     <html>
     <head>
         <style>
-            @page {{
-                size: A4;
-                margin: 0; /* Vamos controlar as margens via CSS para garantir precisão */
+            @media all {{
+                body {{ font-family: 'Segoe UI', Arial, sans-serif; color: #333; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
+                .no-print {{ background-color: #002d5b; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; margin: 20px; font-weight: bold; }}
+                .secao-titulo {{ color:#002d5b; font-size:14px; text-transform: uppercase; margin-top: 30px; display:block; border-bottom: 2px solid #002d5b; padding-bottom:5px; font-weight: bold; }}
+                .texto {{ text-align: justify; font-size: 13px; white-space: pre-wrap; margin-top:10px; line-height:1.5; color: #444; }}
+                .conteudo-pagina {{ padding: 40px 50px; page-break-before: always; }}
+                /* Estilos da Capa */
+                .capa-container {{ height: 29.7cm; width: 21cm; display: flex; page-break-after: always; background-color: white; }}
+                .capa-sidebar {{ width: 60px; background-color: #002d5b; height: 100%; }}
+                .capa-main {{ flex: 1; padding: 80px 60px; display: flex; flex-direction: column; justify-content: space-between; }}
+                .capa-header {{ border-bottom: 4px solid #002d5b; padding-bottom: 20px; }}
+                .capa-titulo {{ font-size: 48px; color: #002d5b; font-weight: 800; margin: 0; line-height: 1; }}
+                .capa-subtitulo {{ font-size: 18px; color: #666; text-transform: uppercase; letter-spacing: 4px; margin-top: 10px; }}
+                .capa-info {{ margin-top: 80px; }}
+                .capa-label {{ color: #002d5b; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; display: block; }}
+                .capa-valor {{ font-size: 20px; color: #333; margin-bottom: 25px; display: block; }}
+                .capa-footer {{ font-size: 14px; color: #888; border-top: 1px solid #eee; padding-top: 20px; }}
             }}
-            body {{ 
-                margin: 0; 
-                padding: 0; 
-                background: #f0f0f0;
-                -webkit-print-color-adjust: exact !important; 
-            }}
-            
-            /* Cada página será um bloco com margens internas fixas */
-            .pagina {{
-                background: white;
-                width: 21cm;
-                min-height: 29.7cm;
-                padding: 2.5cm 2cm; /* 2.5cm no TOPO e BASE, 2cm nas LATERAIS */
-                margin: 0 auto;
-                box-sizing: border-box;
-                position: relative;
-                page-break-after: always;
-            }}
-
-            /* Títulos e Textos */
-            .secao-titulo {{ 
-                color:#002d5b; font-size:14px; text-transform: uppercase; 
-                margin-top: 30px; display:block; border-bottom: 2px solid #002d5b; 
-                padding-bottom:5px; font-weight: bold; 
-            }}
-            .texto {{ 
-                text-align: justify; font-size: 13px; white-space: pre-wrap; 
-                margin-top:10px; line-height: 1.6; color: #444; 
-            }}
-            
-            /* Ajuste específico para a Capa (que pode ter design diferente) */
-            .capa-container {{ 
-                display: flex; 
-                height: 24.7cm; /* Descontando o padding do container */
-            }}
-            .capa-sidebar {{ width: 50px; background-color: #002d5b; margin-left: -2cm; margin-top: -2.5cm; height: 29.7cm; }}
-            .capa-conteudo {{ flex: 1; padding-left: 40px; display: flex; flex-direction: column; justify-content: space-between; }}
-
-            @media print {{
-                body {{ background: none; }}
-                .pagina {{ 
-                    margin: 0; 
-                    border: none; 
-                    width: 100%;
-                }}
-                .no-print {{ display: none !important; }}
-            }}
+            @page {{ size: A4; margin: 0; }}
+            @media print {{ .no-print {{ display: none !important; }} }}
         </style>
     </head>
     <body>
-        <button class="no-print" onclick="window.print()" style="position:fixed; top:20px; right:20px; z-index:9999; background:#002d5b; color:white; padding:15px; border-radius:50px; cursor:pointer; font-weight:bold; border:none; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">🖨️ IMPRIMIR PROPOSTA</button>
+        <button class="no-print" onclick="window.print()">🖨️ GERAR PDF PROFISSIONAL (COM CAPA)</button>
         
-        <div class="pagina">
-            <div class="capa-container">
-                <div class="capa-sidebar"></div>
-                <div class="capa-conteudo">
-                    <div>
-                        <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="220">
-                        <div style="margin-top: 120px;">
-                            <h1 style="font-size: 50px; color: #002d5b; margin:0; line-height:1;">PROPOSTA<br>TÉCNICA</h1>
-                            <p style="font-size: 18px; color: #666; text-transform: uppercase; letter-spacing: 5px; margin-top:15px;">Manutenção e Facilities</p>
-                        </div>
+        <div class="capa-container">
+            <div class="capa-sidebar"></div>
+            <div class="capa-main">
+                <div class="capa-header">
+                    <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="220">
+                    <div style="margin-top: 60px;">
+                        <h1 class="capa-titulo">PROPOSTA<br>TÉCNICA</h1>
+                        <div class="capa-subtitulo">Manutenção e Facilities</div>
                     </div>
-                    <div style="margin-bottom: 50px;">
-                        <p style="color: #002d5b; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom:5px;">Preparado para:</p>
-                        <p style="font-size: 26px; color: #333; margin:0;"><b>{r_social}</b></p>
-                        <br>
-                        <p style="color: #002d5b; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom:5px;">Referência:</p>
-                        <p style="font-size: 18px; color: #333; margin:0;">ORÇAMENTO #{num_exibicao}</p>
-                    </div>
-                    <div style="font-size: 14px; color: #888; border-top: 1px solid #eee; padding-top: 20px;">
-                        Rio de Janeiro, {data_hoje}
+                </div>
+                <div class="capa-info">
+                    <span class="capa-label">Preparado para:</span>
+                    <span class="capa-valor"><b>{r_social}</b></span>
+                    <span class="capa-label">Empreendimento:</span>
+                    <span class="capa-valor">{empreend}</span>
+                    <span class="capa-label">Referência:</span>
+                    <span class="capa-valor">ORÇAMENTO #{num_exibicao}</span>
+                </div>
+                <div class="capa-footer">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Rio de Janeiro, {data_hoje}</span>
+                        <span><b>PROFIX</b> | Gestão de Facilities</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="pagina">
-            <table style="width:100%; border-collapse: collapse; margin-bottom: 40px;">
+        <div class="conteudo-pagina">
+            <table style="width:100%; border-collapse: collapse; margin-bottom: 5px;">
                 <tr>
-                    <td style="width:35%;">
-                        <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="180">
+                    <td style="width:35%; vertical-align: middle;">
+                        <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="200">
                     </td>
-                    <td style="width:65%; text-align:right; font-size:10px; color: #777; line-height: 1.5;">
+                    <td style="width:65%; text-align:right; vertical-align: middle; font-size:10px; line-height: 1.5;">
                         <b style="color:#002d5b; font-size:12px;">PROFIX GESTÃO DE FACILITIES</b><br>
                         CNPJ: 52.620.102/0001-03<br>
-                        Rio de Janeiro - RJ | www.profixmanutencao.com
+                        Av. Marechal Câmara, 160, Centro, Rio De Janeiro RJ, 20020-907<br>
+                        Tel: 21 3609-1314 | atendimento@profixmanutencao.com<br>
+                        www.profixmanutencao.com
                     </td>
                 </tr>
             </table>
-            
-            <div style="background:#002d5b; color:white; text-align:center; padding:15px; font-size:18px; font-weight:bold; margin-bottom: 30px;">PROPOSTA TÉCNICA COMERCIAL</div>
-            
-            <div style="border: 1px solid #eee; padding:20px; margin-bottom:30px; background:#fcfcfc; font-size:13px;">
-                <table style="width:100%;">
-                    <tr>
-                        <td><b>CLIENTE:</b> {r_social}<br><b>CNPJ:</b> {cnpj_val}</td>
-                        <td style="border-left: 1px solid #ddd; padding-left: 20px;"><b>LOCAL:</b> {empreend}<br><b>A/C:</b> {cuidados}</td>
-                    </tr>
-                </table>
+            <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-size:18px; font-weight:bold;">PROPOSTA TÉCNICA COMERCIAL</div>
+            <div style="display:flex; justify-content:space-between; margin-top:5px; font-size:12px; font-weight:bold; color:#002d5b;">
+                <span>ORÇAMENTO Nº: {num_exibicao}</span>
+                <span>Rio de Janeiro, {data_hoje}</span>
+            </div>
+            <div style="border:1px solid #002d5b; padding:12px; margin-top:10px; margin-bottom:15px; font-size:13px; display:flex;">
+                <div style="flex:1;"><b>CLIENTE:</b> {r_social}<br><b>CNPJ:</b> {cnpj_val}</div>
+                <div style="flex:1; border-left: 1px solid #002d5b; padding-left:15px;"><b>EMPREENDIMENTO:</b> {empreend}<br><b>A/C:</b> {cuidados}</div>
             </div>
 
-            <b class="secao-titulo">1. METODOLOGIA E ESCOPO TÉCNICO</b>
-            <div class="texto">{s1}</div>
-            
-            <b class="secao-titulo">2. MATERIAIS E LOGÍSTICA</b>
-            <div class="texto">{s2}</div>
-            
-            <b class="secao-titulo">3. ATENDIMENTO</b>
-            <div class="texto">{s3}</div>
+            <b class="secao-titulo">1. METODOLOGIA E ESCOPO TÉCNICO</b><div class="texto">{s1}</div>
+            <b class="secao-titulo">2. MATERIAIS INCLUSOS</b><div class="texto">{s2}</div>
+            <b class="secao-titulo">3. ATENDIMENTO E SUPORTE</b><div class="texto">{s3}</div>
             
             {fotos_html}
 
-            <div style="page-break-inside: avoid; margin-top: 50px;">
-                <b class="secao-titulo">5. INVESTIMENTO</b>
-                <div style="margin-top:20px;">{itens_html}</div>
-                <div style="margin-top:50px; display:flex; justify-content:space-between; align-items:flex-end;">
-                    <div style="font-size:11px; color:#888; flex:1; padding-right: 50px;">{s4}</div>
-                    <div style="background:#002d5b; color:white; padding:30px; text-align:right; min-width:280px; border-radius: 8px;">
-                        <small style="opacity:0.7; font-weight:bold; text-transform:uppercase;">Valor Total Mensal</small><br>
-                        <b style="font-size:30px;">R$ {valor_total:,.2f}</b>
+            <div style="page-break-inside: avoid;">
+                <b class="secao-titulo">5. DETALHAMENTO DE INVESTIMENTO</b>
+                <div style="margin-top:10px;">{itens_html}</div>
+                <div style="margin-top:30px; display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div style="font-size:11px; color:#555; flex:1; padding-right: 20px;">{s4}</div>
+                    <div style="background:#f1f4f9 !important; padding:20px; border-left:8px solid #002d5b; text-align:right; min-width:260px;">
+                        <small style="color:#666;">VALOR TOTAL DO PROJETO</small><br>
+                        <b style="font-size:26px; color:#002d5b;">R$ {valor_total:,.2f}</b>
                     </div>
                 </div>
             </div>
         </div>
     </body>
     </html>"""
+
 # =========================================================
 # 3) INTERFACE
 # =========================================================
