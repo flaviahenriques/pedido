@@ -1,4 +1,5 @@
 streamlit
 openai
-pillow
 supabase
+pillow
+fpdf
