@@ -17,22 +17,24 @@ OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
-# Inicialização de estados de sessão para evitar perda de dados
+# Inicialização de estados de sessão
 if "itens" not in st.session_state: st.session_state.itens = []
 if "fotos" not in st.session_state: st.session_state.fotos = []
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 
 # =========================================================
-# 2) DESIGN DA PROPOSTA (CABEÇALHO ORIGINAL RESTAURADO)
+# 2) DESIGN DA PROPOSTA (CABEÇALHO ORIGINAL)
 # =========================================================
 def montar_layout_proposta(r_social, cnpj_val, empreend, local, cuidados, escopo, lista_itens, lista_fotos, valor_total):
     data_hoje = datetime.now().strftime("%d/%m/%Y")
     
-    # Divide os 4 campos de escopo usando o separador |||
+    # DIVISÃO SEGURA DO ESCOPO: Garante que sempre existam 4 partes, evitando o IndexError
     partes = escopo.split("|||")
-    s1, s2, s3, s4 = (partes + ["", "", "", ""])[:4]
+    while len(partes) < 4:
+        partes.append("")
+    s1, s2, s3, s4 = partes[0], partes[1], partes[2], partes[3]
 
-    # Galeria de Fotos (Item 4 - ANTES do Investimento)
+    # Galeria de Fotos (Item 4)
     fotos_html = ""
     if lista_fotos:
         fotos_html += "<b style='color:#002d5b; font-size:16px;'>4. RELATÓRIO FOTOGRÁFICO</b><br><br>"
@@ -71,10 +73,7 @@ def montar_layout_proposta(r_social, cnpj_val, empreend, local, cuidados, escopo
                 border: none; border-radius: 5px; cursor: pointer; font-weight: bold;
                 margin-bottom: 30px;
             }}
-            @media print {{ 
-                .no-print {{ display: none !important; }} 
-                body {{ padding: 0; }}
-            }}
+            @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; }} }}
         </style>
     </head>
     <body>
@@ -112,7 +111,7 @@ def montar_layout_proposta(r_social, cnpj_val, empreend, local, cuidados, escopo
     </html>"""
 
 # =========================================================
-# 3) INTERFACE STREAMLIT (PAINEL COMPLETO)
+# 3) INTERFACE
 # =========================================================
 with st.sidebar:
     st.image("https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix", width=180)
@@ -122,7 +121,6 @@ with st.sidebar:
         st.session_state.itens = []; st.session_state.fotos = []; st.session_state.edit_id = None
         st.rerun()
 
-# --- ABA: GERENCIAR PEDIDOS ---
 if menu == "Gerenciar Pedidos":
     st.header("📋 Histórico")
     pedidos = supabase.table("orcamentos").select("*").order("id", desc=True).execute().data
@@ -142,34 +140,34 @@ if menu == "Gerenciar Pedidos":
                 st.session_state.fotos = [{"url_foto": f['url_foto'], "nome": f['nome_item']} for f in ft_db]
                 st.success("Carregado! Vá para 'Novo Orçamento'.")
 
-# --- ABA: NOVO ORÇAMENTO ---
 else:
     st.header("📑 " + ("Editando Proposta" if st.session_state.edit_id else "Nova Proposta"))
     
-    # Memória de Clientes
     dados_memo = supabase.table("orcamentos").select("cliente_razao_social, cliente_cnpj, empreendimento, localizacao, aos_cuidados").execute().data
     clientes_memo = {d['cliente_razao_social']: d for d in dados_memo if d['cliente_razao_social']}
 
     with st.expander("1. Dados do Cliente", expanded=True):
         sel_c = st.selectbox("Cliente Existente?", ["-- Novo --"] + list(clientes_memo.keys()))
-        rz, cnpj, emp, loc, ac, esc = "", "", "", "", "", "||||||"
+        rz, cnp, emp, loc, ac, esc_db = "", "", "", "", "", "||||||"
         
         if st.session_state.edit_id:
             curr = supabase.table("orcamentos").select("*").eq("id", st.session_state.edit_id).execute().data[0]
-            rz, cnpj, emp, loc, ac, esc = curr['cliente_razao_social'], curr['cliente_cnpj'], curr['empreendimento'], curr['localizacao'], curr['aos_cuidados'], curr['metodologia_escopo']
+            rz, cnp, emp, loc, ac, esc_db = curr['cliente_razao_social'], curr['cliente_cnpj'], curr['empreendimento'], curr['localizacao'], curr['aos_cuidados'], curr['metodologia_escopo']
         elif sel_c != "-- Novo --":
             c = clientes_memo[sel_c]
-            rz, cnpj, emp, loc, ac = c['cliente_razao_social'], c['cliente_cnpj'], c['empreendimento'], c['localizacao'], c['aos_cuidados']
+            rz, cnp, emp, loc, ac = c['cliente_razao_social'], c['cliente_cnpj'], c['empreendimento'], c['localizacao'], c['aos_cuidados']
 
-        c1, c2 = st.columns(2)
-        razao = c1.text_input("Razão Social", value=rz)
-        cnpj_val = c2.text_input("CNPJ", value=cnpj)
-        emp_val = c1.text_input("Empreendimento", value=emp)
-        loc_val = c2.text_input("Localização", value=loc)
-        ac_val = c1.text_input("Aos Cuidados", value=ac)
+        razao = st.text_input("Razão Social", value=rz)
+        cnpj_val = st.text_input("CNPJ", value=cnp)
+        emp_val = st.text_input("Empreendimento", value=emp)
+        loc_val = st.text_input("Localização", value=loc)
+        ac_val = st.text_input("Aos Cuidados", value=ac)
 
     with st.expander("2. Escopo Técnico", expanded=True):
-        p_esc = esc.split("|||") if 'esc' in locals() else ["","","",""]
+        # FIX PARA O INDEX ERROR: Garante que p_esc sempre tenha 4 posições
+        p_esc = esc_db.split("|||")
+        while len(p_esc) < 4: p_esc.append("")
+        
         t1 = st.text_area("1. Metodologia", value=p_esc[0], height=100)
         t2 = st.text_area("2. Materiais", value=p_esc[1], height=70)
         t3 = st.text_area("3. Atendimento", value=p_esc[2], height=70)
