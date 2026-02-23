@@ -25,12 +25,12 @@ if "edit_id" not in st.session_state: st.session_state.edit_id = None
 
 @st.cache_data(show_spinner=False)
 def transformar_url_em_base64(url):
-    """ Baixa a foto da URL e converte em Base64 para o PDF sem travar """
+    """ Converte URL do Storage em Base64 para garantir renderização no PDF """
     if not url or not str(url).startswith("http"):
         return url
     try:
         headers = {'User-Agent': 'Mozilla/5.0'}
-        res = requests.get(url, headers=headers, timeout=10)
+        res = requests.get(url, headers=headers, timeout=15)
         if res.status_code == 200:
             content_type = res.headers.get('content-type', 'image/png')
             b64 = base64.b64encode(res.content).decode()
@@ -40,9 +40,8 @@ def transformar_url_em_base64(url):
     return url
 
 def upload_imagem_supabase(foto_obj):
-    """ Faz o upload real da imagem para o Storage 'fotos_orcamentos' """
+    """ Realiza o upload real para o Bucket 'fotos_orcamentos' """
     try:
-        # Se já tiver URL (veio do histórico), não precisa subir de novo
         if "url_foto" in foto_obj and str(foto_obj['url_foto']).startswith("http"):
             return foto_obj['url_foto']
             
@@ -50,29 +49,25 @@ def upload_imagem_supabase(foto_obj):
             file_content = foto_obj['file'].getvalue()
             file_ext = foto_obj['file'].name.split('.')[-1]
             file_name = f"{uuid.uuid4()}.{file_ext}"
-            
             bucket_name = "fotos_orcamentos"
-            # Upload para o Storage do Supabase
+            
             supabase.storage.from_(bucket_name).upload(file_name, file_content)
-            # Retorna a URL pública do arquivo
             res = supabase.storage.from_(bucket_name).get_public_url(file_name)
             return res
     except Exception as e:
-        st.error(f"Erro no Upload para o Storage: {e}")
+        st.error(f"Erro no Upload: {e}")
         return None
     return None
 
 # =========================================================
-# 2) DESIGN DA PROPOSTA
+# 2) DESIGN DA PROPOSTA (INCLUINDO CAPA)
 # =========================================================
 def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados, escopo, lista_itens, lista_fotos, valor_total):
     data_hoje = datetime.now().strftime("%d/%m/%Y")
     ano_atual = datetime.now().year
-    
     partes = escopo.split("|||")
     while len(partes) < 4: partes.append("")
     s1, s2, s3, s4 = partes[0], partes[1], partes[2], partes[3]
-    
     num_exibicao = f"{ano_atual}-{str(id_orc).zfill(3)}" if id_orc else "PROVISÓRIO"
 
     fotos_html = ""
@@ -80,7 +75,6 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
         fotos_html += '<b class="secao-titulo">4. RELATÓRIO FOTOGRÁFICO</b>'
         fotos_html += '<div style="display: flex; flex-wrap: wrap; gap: 2%; margin-top: 15px;">'
         for f in lista_fotos:
-            # Converte para base64 para garantir que o PDF gere as imagens
             img_src = ""
             if f.get('url_foto') and str(f['url_foto']).startswith("http"):
                 img_src = transformar_url_em_base64(f['url_foto'])
@@ -102,52 +96,97 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
     <head>
         <style>
             @media all {{
-                body {{ font-family: Arial, sans-serif; color: #333; margin: 0; padding: 20px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
-                .no-print {{ background-color: #002d5b; color: white; padding: 12px; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 20px; font-weight: bold; }}
-                .secao-titulo {{ color:#002d5b; font-size:14px; text-transform: uppercase; margin-top: 25px; display:block; border-bottom: 2px solid #002d5b; padding-bottom:3px; font-weight: bold; }}
-                .texto {{ text-align: justify; font-size: 13px; white-space: pre-wrap; margin-top:8px; line-height:1.4; }}
+                body {{ font-family: 'Segoe UI', Arial, sans-serif; color: #333; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
+                .no-print {{ background-color: #002d5b; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; margin: 20px; font-weight: bold; }}
+                .secao-titulo {{ color:#002d5b; font-size:14px; text-transform: uppercase; margin-top: 30px; display:block; border-bottom: 2px solid #002d5b; padding-bottom:5px; font-weight: bold; }}
+                .texto {{ text-align: justify; font-size: 13px; white-space: pre-wrap; margin-top:10px; line-height:1.5; color: #444; }}
+                .conteudo-pagina {{ padding: 40px 50px; page-break-before: always; }}
+                /* Estilos da Capa */
+                .capa-container {{ height: 29.7cm; width: 21cm; display: flex; page-break-after: always; background-color: white; }}
+                .capa-sidebar {{ width: 60px; background-color: #002d5b; height: 100%; }}
+                .capa-main {{ flex: 1; padding: 80px 60px; display: flex; flex-direction: column; justify-content: space-between; }}
+                .capa-header {{ border-bottom: 4px solid #002d5b; padding-bottom: 20px; }}
+                .capa-titulo {{ font-size: 48px; color: #002d5b; font-weight: 800; margin: 0; line-height: 1; }}
+                .capa-subtitulo {{ font-size: 18px; color: #666; text-transform: uppercase; letter-spacing: 4px; margin-top: 10px; }}
+                .capa-info {{ margin-top: 80px; }}
+                .capa-label {{ color: #002d5b; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; display: block; }}
+                .capa-valor {{ font-size: 20px; color: #333; margin-bottom: 25px; display: block; }}
+                .capa-footer {{ font-size: 14px; color: #888; border-top: 1px solid #eee; padding-top: 20px; }}
             }}
-            @page {{ size: A4; margin: 1cm; }}
-            @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; margin: 0; }} }}
+            @page {{ size: A4; margin: 0; }}
+            @media print {{ .no-print {{ display: none !important; }} }}
         </style>
     </head>
     <body>
-        <button class="no-print" onclick="window.print()">🖨️ IMPRIMIR / SALVAR PDF</button>
-        <table style="width:100%; border-collapse: collapse; margin-bottom: 5px;">
-            <tr>
-                <td style="width:35%; vertical-align: middle;">
-                    <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="200">
-                </td>
-                <td style="width:65%; text-align:right; vertical-align: middle; font-size:10px; line-height: 1.5;">
-                    <b style="color:#002d5b; font-size:12px;">PROFIX GESTÃO DE FACILITIES</b><br>
-                    CNPJ: 52.620.102/0001-03<br>
-                    Av. Marechal Câmara, 160, Centro, Rio De Janeiro RJ, 20020-907<br>
-                    Tel: 21 3609-1314 | atendimento@profixmanutencao.com<br>
-                    www.profixmanutencao.com
-                </td>
-            </tr>
-        </table>
-        <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-size:18px; font-weight:bold;">PROPOSTA TÉCNICA COMERCIAL</div>
-        <div style="display:flex; justify-content:space-between; margin-top:5px; font-size:12px; font-weight:bold; color:#002d5b;">
-            <span>ORÇAMENTO Nº: {num_exibicao}</span>
-            <span>Rio de Janeiro, {data_hoje}</span>
+        <button class="no-print" onclick="window.print()">🖨️ GERAR PDF PROFISSIONAL (COM CAPA)</button>
+        
+        <div class="capa-container">
+            <div class="capa-sidebar"></div>
+            <div class="capa-main">
+                <div class="capa-header">
+                    <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="220">
+                    <div style="margin-top: 60px;">
+                        <h1 class="capa-titulo">PROPOSTA<br>TÉCNICA</h1>
+                        <div class="capa-subtitulo">Manutenção e Facilities</div>
+                    </div>
+                </div>
+                <div class="capa-info">
+                    <span class="capa-label">Preparado para:</span>
+                    <span class="capa-valor"><b>{r_social}</b></span>
+                    <span class="capa-label">Empreendimento:</span>
+                    <span class="capa-valor">{empreend}</span>
+                    <span class="capa-label">Referência:</span>
+                    <span class="capa-valor">ORÇAMENTO #{num_exibicao}</span>
+                </div>
+                <div class="capa-footer">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Rio de Janeiro, {data_hoje}</span>
+                        <span><b>PROFIX</b> | Gestão de Facilities</span>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div style="border:1px solid #002d5b; padding:12px; margin-top:10px; margin-bottom:15px; font-size:13px; display:flex;">
-            <div style="flex:1;"><b>CLIENTE:</b> {r_social}<br><b>CNPJ:</b> {cnpj_val}</div>
-            <div style="flex:1; border-left: 1px solid #002d5b; padding-left:15px;"><b>EMPREENDIMENTO:</b> {empreend}<br><b>A/C:</b> {cuidados}</div>
-        </div>
-        <b class="secao-titulo">1. METODOLOGIA E ESCOPO TÉCNICO</b><div class="texto">{s1}</div>
-        <b class="secao-titulo">2. MATERIAIS INCLUSOS</b><div class="texto">{s2}</div>
-        <b class="secao-titulo">3. ATENDIMENTO E SUPORTE</b><div class="texto">{s3}</div>
-        {fotos_html}
-        <div style="page-break-inside: avoid;">
-            <b class="secao-titulo">5. DETALHAMENTO DE INVESTIMENTO</b>
-            <div style="margin-top:10px;">{itens_html}</div>
-            <div style="margin-top:30px; display:flex; justify-content:space-between; align-items:flex-start;">
-                <div style="font-size:11px; color:#555; flex:1; padding-right: 20px;">{s4}</div>
-                <div style="background:#f1f4f9 !important; padding:20px; border-left:8px solid #002d5b; text-align:right; min-width:260px;">
-                    <small style="color:#666;">VALOR TOTAL DO PROJETO</small><br>
-                    <b style="font-size:26px; color:#002d5b;">R$ {valor_total:,.2f}</b>
+
+        <div class="conteudo-pagina">
+            <table style="width:100%; border-collapse: collapse; margin-bottom: 5px;">
+                <tr>
+                    <td style="width:35%; vertical-align: middle;">
+                        <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="200">
+                    </td>
+                    <td style="width:65%; text-align:right; vertical-align: middle; font-size:10px; line-height: 1.5;">
+                        <b style="color:#002d5b; font-size:12px;">PROFIX GESTÃO DE FACILITIES</b><br>
+                        CNPJ: 52.620.102/0001-03<br>
+                        Av. Marechal Câmara, 160, Centro, Rio De Janeiro RJ, 20020-907<br>
+                        Tel: 21 3609-1314 | atendimento@profixmanutencao.com<br>
+                        www.profixmanutencao.com
+                    </td>
+                </tr>
+            </table>
+            <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-size:18px; font-weight:bold;">PROPOSTA TÉCNICA COMERCIAL</div>
+            <div style="display:flex; justify-content:space-between; margin-top:5px; font-size:12px; font-weight:bold; color:#002d5b;">
+                <span>ORÇAMENTO Nº: {num_exibicao}</span>
+                <span>Rio de Janeiro, {data_hoje}</span>
+            </div>
+            <div style="border:1px solid #002d5b; padding:12px; margin-top:10px; margin-bottom:15px; font-size:13px; display:flex;">
+                <div style="flex:1;"><b>CLIENTE:</b> {r_social}<br><b>CNPJ:</b> {cnpj_val}</div>
+                <div style="flex:1; border-left: 1px solid #002d5b; padding-left:15px;"><b>EMPREENDIMENTO:</b> {empreend}<br><b>A/C:</b> {cuidados}</div>
+            </div>
+
+            <b class="secao-titulo">1. METODOLOGIA E ESCOPO TÉCNICO</b><div class="texto">{s1}</div>
+            <b class="secao-titulo">2. MATERIAIS INCLUSOS</b><div class="texto">{s2}</div>
+            <b class="secao-titulo">3. ATENDIMENTO E SUPORTE</b><div class="texto">{s3}</div>
+            
+            {fotos_html}
+
+            <div style="page-break-inside: avoid;">
+                <b class="secao-titulo">5. DETALHAMENTO DE INVESTIMENTO</b>
+                <div style="margin-top:10px;">{itens_html}</div>
+                <div style="margin-top:30px; display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div style="font-size:11px; color:#555; flex:1; padding-right: 20px;">{s4}</div>
+                    <div style="background:#f1f4f9 !important; padding:20px; border-left:8px solid #002d5b; text-align:right; min-width:260px;">
+                        <small style="color:#666;">VALOR TOTAL DO PROJETO</small><br>
+                        <b style="font-size:26px; color:#002d5b;">R$ {valor_total:,.2f}</b>
+                    </div>
                 </div>
             </div>
         </div>
@@ -156,7 +195,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
 
 # =========================================================
 # 3) INTERFACE
-# =================================########################
+# =========================================================
 with st.sidebar:
     st.image("https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix", width=180)
     st.title("🛡️ Painel PROFIX")
@@ -166,14 +205,13 @@ with st.sidebar:
         st.rerun()
 
 if menu == "Gerenciar Pedidos":
-    st.header("📋 Histórico de Orçamentos")
+    st.header("📋 Histórico")
     pedidos = supabase.table("orcamentos").select("*").order("id", desc=True).execute().data
     lista_cli = sorted(list(set([p['cliente_razao_social'] for p in pedidos if p['cliente_razao_social']])))
     filtro = st.selectbox("Filtrar Cliente", ["Todos"] + lista_cli)
-    
     for p in pedidos:
         if filtro != "Todos" and p['cliente_razao_social'] != filtro: continue
-        with st.expander(f"ID {p['id']} - {p['cliente_razao_social']} - {p['empreendimento']}"):
+        with st.expander(f"ID {p['id']} - {p['cliente_razao_social']}"):
             if st.button("📝 Editar", key=f"ed_{p['id']}"):
                 st.session_state.edit_id = p['id']
                 it_db = supabase.table("itens_orcamento").select("*").eq("orcamento_id", p['id']).execute().data
@@ -184,14 +222,12 @@ if menu == "Gerenciar Pedidos":
 
 else:
     st.header("📑 " + ("Editando Proposta" if st.session_state.edit_id else "Nova Proposta"))
-    
     dados_memo = supabase.table("orcamentos").select("cliente_razao_social, cliente_cnpj, empreendimento, localizacao, aos_cuidados").execute().data
     clientes_memo = {d['cliente_razao_social']: d for d in dados_memo if d['cliente_razao_social']}
 
     with st.expander("1. Dados do Cliente", expanded=True):
         sel_c = st.selectbox("Cliente Existente?", ["-- Novo --"] + list(clientes_memo.keys()))
-        rz, cnp, emp, loc, ac, esc_db = "", "", "", "", "", "||||||"
-        
+        rz, cnp, emp, loc, ac, esc_db = "", "", "", "", "", "||| ||| ||| "
         if st.session_state.edit_id:
             curr = supabase.table("orcamentos").select("*").eq("id", st.session_state.edit_id).execute().data[0]
             rz, cnp, emp, loc, ac, esc_db = curr['cliente_razao_social'], curr['cliente_cnpj'], curr['empreendimento'], curr['localizacao'], curr['aos_cuidados'], curr['metodologia_escopo']
@@ -205,17 +241,16 @@ else:
         loc_val = c2.text_input("Localização", value=loc)
         ac_val = c1.text_input("Aos Cuidados", value=ac)
 
-    with st.expander("2. Escopo Técnico (Textos Originais)", expanded=True):
+    with st.expander("2. Escopo Técnico (PROFIX)", expanded=True):
         p_esc = esc_db.split("|||")
-        # Se for NOVO, carrega seus TEXTOS ORIGINAIS
-        if not st.session_state.edit_id and (len(p_esc) < 2 or p_esc[0] == ""):
+        if not st.session_state.edit_id and (len(p_esc) < 2 or p_esc[0].strip() == ""):
             p_esc = [
-                """A PROFIX atuará com foco na preservação do padrão estético e na manutenção da integridade das instalações, assegurando que os apartamentos decorados e estandes de vendas mantenham-se em estado de 'novo' e prontos para visitação...""", # Texto encurtado aqui para caber no exemplo, mas no código está o FULL
+                """A PROFIX atuará com foco na preservação do padrão estético e na manutenção da integridade das instalações, assegurando que os apartamentos decorados e estandes de vendas mantenham-se em estado de 'novo' e prontos para visitação...""",
                 """A PROFIX assume o fornecimento integral de todos os materiais de consumo e peças de reposição necessários para a execução dos serviços descritos nesta proposta...""",
                 """Perfil da Equipe: Os serviços são executados por profissionais capacitados para atuar em ambientes de alto padrão...""",
                 """<b>CONDIÇÕES COMERCIAIS</b><br>Vigência do Contrato: 12 (doze) meses..."""
             ]
-            # [Nota: Recoloquei os textos gigantes completos dentro da variável p_esc abaixo]
+            # Redefinindo com os textos full que você enviou
             p_esc[0] = """A PROFIX atuará com foco na preservação do padrão estético e na manutenção da integridade das instalações, assegurando que os apartamentos decorados e estandes de vendas mantenham-se em estado de 'novo' e prontos para visitação. Nossa metodologia prioriza a conservação detalhada para que o ambiente reflita fielmente a qualidade do projeto original, compreendendo:
 
 Gestão de Iluminação e Atmosfera (Elétrica): Manutenção contínua de todo o sistema de iluminação decorativa e funcional. Realizamos a substituição imediata de lâmpadas e fitas LED, respeitando rigorosamente a temperatura de cor (quente/fria) e a intensidade original do projeto de interiores, garantindo que o ambiente mantenha a atmosfera planejada pelos arquitetos. Cuidamos da funcionalidade e limpeza de tomadas e interruptores.
@@ -236,7 +271,6 @@ Zelo com Inox e Metais: Limpeza técnica e conservação estética de portas de 
 Este escopo não contempla: manutenção mecânica/eletrônica de ar-condicionado (apenas filtros e drenos), reposição de vidros/espelhos, manutenção mecânica de elevadores, reformas estruturais, limpeza de fachadas ou reparos em mobiliário solto/decoração.
 
 Objetivo: Manter a infraestrutura operacional e estética em nível de excelência, permitindo que o foco total do visitante esteja na qualidade e nos detalhes do imóvel."""
-            
             p_esc[1] = """A PROFIX assume o fornecimento integral de todos os materiais de consumo e peças de reposição necessários para a execução dos serviços descritos nesta proposta. Nossa logística de suprimentos segue critérios rigorosos para garantir a integridade do projeto e a valorização do imóvel:
 
 Critério de Substituição e Fidelidade: Na manutenção de qualquer componente, seguiremos rigorosamente o padrão da peça já instalada no local. A prioridade será total para a mesma marca e referência do projeto original.
@@ -250,7 +284,6 @@ Critério de Retoque e Pintura Geral: A proposta contempla o retoque pontual. Ca
 Principais insumos cobertos: Componentes de iluminação LED (lâmpadas, fitas, reatores), dispositivos elétricos (tomadas, interruptores), vedações (silicones, rejuntes), hidráulica (reparos de válvulas, engates) e materiais de acabamento (tinta, massas, lixas, seladores).
 
 Logística: A gestão de compra e entrega dos insumos é de inteira responsabilidade da PROFIX, garantindo agilidade imediata nos reparos."""
-            
             p_esc[2] = """Perfil da Equipe: Os serviços são executados por profissionais capacitados para atuar em ambientes de alto padrão. Priorizamos a organização e a limpeza absoluta do local após cada intervenção, preservando a integridade do mobiliário decorativo e a estética do projeto.
 
 Gestão por Relatórios Digitais: Após cada manutenção, será enviado um Relatório Fotográfico detalhado (antes e depois). Este documento garante o controle da construtora sobre a preservação do seu patrimônio e serve como histórico técnico das instalações.
@@ -258,9 +291,7 @@ Gestão por Relatórios Digitais: Após cada manutenção, será enviado um Rela
 Respeito ao Fluxo de Vendas: As visitas e intervenções serão coordenadas com a administração do estande para não interferir nos horários de maior fluxo de clientes, mantendo o ambiente sempre pronto para recepção.
 
 Compromisso de Agilidade: A PROFIX estabelece o prazo máximo de 48 horas para o atendimento e resolução de chamados após a abertura da solicitação."""
-            
-            p_esc[3] = """<b>CONDIÇÕES COMERCIAIS</b><br>
-Vigência do Contrato: 12 (doze) meses, garantindo a manutenção contínua e a preservação do padrão estético do patrimônio durante o ciclo de exposição.
+            p_esc[3] = """<b>CONDIÇÕES COMERCIAIS</b><br>Vigência do Contrato: 12 (doze) meses, garantindo a manutenção contínua e a preservação do padrão estético do patrimônio durante o ciclo de exposição.
 
 Abrangência: O valor proposto contempla todos os custos diretos e indiretos, incluindo mão de obra especializada, materiais de rotina, encargos trabalhistas, previdenciários, tributos (ISS, PIS, COFINS), seguros e EPIs.
 
@@ -274,7 +305,7 @@ Validade da Proposta: 30 dias."""
         t1 = st.text_area("1. Metodologia", value=p_esc[0], height=350)
         t2 = st.text_area("2. Materiais", value=p_esc[1], height=250)
         t3 = st.text_area("3. Atendimento", value=p_esc[2], height=200)
-        t4 = st.text_area("Condições Comerciais", value=p_esc[3], height=200)
+        t4 = st.text_area("Condições Comerciais", value=p_esc[3], height=150)
         escopo_final = f"{t1}|||{t2}|||{t3}|||{t4}"
 
     with st.expander("3. Fotos e Valores", expanded=True):
@@ -287,17 +318,15 @@ Validade da Proposta: 30 dias."""
         
         for idx, f in enumerate(st.session_state.fotos):
             cc1, cc2, cc3 = st.columns([1, 4, 0.5])
-            preview = f.get('url_foto') if f.get('url_foto') else f.get('file')
-            if preview: cc1.image(preview, width=100)
-            f['nome'] = cc2.text_input(f"Legenda {idx+1}", f['nome'], key=f"f_txt_{idx}")
+            prev = f.get('url_foto') if f.get('url_foto') else f.get('file')
+            if prev: cc1.image(prev, width=100)
+            f['nome'] = cc2.text_input(f"Legenda {idx}", f['nome'], key=f"f_txt_{idx}")
             if cc3.button("🗑️", key=f"del_f_{idx}"): st.session_state.fotos.pop(idx); st.rerun()
 
         st.divider()
         ci1, ci2, ci3 = st.columns([3, 1, 1])
-        it_n, it_q, it_v = ci1.text_input("Serviço"), ci2.number_input("Qtd", 1), ci3.number_input("Unitário", 0.0)
-        if st.button("➕ Adicionar Item"):
-            st.session_state.itens.append({"serv": it_n, "qtd": it_q, "total": it_q * it_v}); st.rerun()
-        
+        it_n, it_q, it_v = ci1.text_input("Serviço"), ci2.number_input("Qtd", 1), ci3.number_input("R$ Unit", 0.0)
+        if st.button("➕ Adicionar"): st.session_state.itens.append({"serv": it_n, "qtd": it_q, "total": it_q * it_v}); st.rerun()
         for i_idx, it in enumerate(st.session_state.itens):
             c_it1, c_it2, c_it3 = st.columns([4, 1, 0.5])
             c_it1.write(f"**{it['serv']}** (x{it['qtd']})")
@@ -306,10 +335,9 @@ Validade da Proposta: 30 dias."""
 
     total_proposta = sum(i['total'] for i in st.session_state.itens)
     
-    if st.button("💾 SALVAR E FINALIZAR PROPOSTA", type="primary", use_container_width=True):
-        with st.spinner("Salvando arquivos no Storage..."):
+    if st.button("💾 SALVAR PROPOSTA COMPLETA", type="primary", use_container_width=True):
+        with st.spinner("Sincronizando com o banco e Storage..."):
             payload = {"cliente_razao_social": razao, "cliente_cnpj": cnpj_val, "empreendimento": emp_val, "localizacao": loc_val, "aos_cuidados": ac_val, "valor_total": total_proposta, "metodologia_escopo": escopo_final, "status": "Enviado"}
-            
             if st.session_state.edit_id:
                 oid = st.session_state.edit_id
                 supabase.table("orcamentos").update(payload).eq("id", oid).execute()
@@ -323,11 +351,11 @@ Validade da Proposta: 30 dias."""
                 supabase.table("itens_orcamento").insert({"orcamento_id": oid, "servico": i['serv'], "quantidade": i['qtd'], "valor_total": i['total']}).execute()
             
             for f in st.session_state.fotos: 
-                url_final = upload_imagem_supabase(f) # Faz o upload real
+                url_final = upload_imagem_supabase(f)
                 if url_final:
                     supabase.table("fotos_relatorio").insert({"orcamento_id": oid, "nome_item": f['nome'], "url_foto": url_final}).execute()
             
-            st.success(f"✅ Proposta Salva! ID: {oid}")
+            st.success(f"✅ Proposta {oid} Salva!")
             st.rerun()
 
     st.divider()
