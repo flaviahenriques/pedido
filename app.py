@@ -4,7 +4,7 @@ import openai
 from PIL import Image
 from supabase import create_client
 import base64
-
+from fpdf import FPDF  # Nova biblioteca para o PDF
 
 # #########################################################
 # 1) CONFIGURAÇÕES DE CONEXÃO E PÁGINA (VERSÃO SEGURA)
@@ -18,6 +18,52 @@ OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 client = openai.OpenAI(api_key=OPENAI_API_KEY)
+
+# =========================================================
+# FUNÇÃO PARA GERAR O PDF (ADICIONADA)
+# =========================================================
+def gerar_pdf_profix(r_social, escopo, valor_total, itens):
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # Logo
+    try:
+        # Tentativa de carregar a logo via URL (pode variar dependendo da conexão do servidor)
+        pdf.image("https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix", x=10, y=8, w=45)
+    except:
+        pass
+        
+    pdf.set_font("Arial", 'B', 16)
+    pdf.ln(20)
+    pdf.cell(200, 10, "PROPOSTA TECNICA COMERCIAL", ln=True, align='C')
+    
+    pdf.ln(10)
+    pdf.set_font("Arial", 'B', 11)
+    pdf.cell(0, 8, f"CLIENTE: {r_social.upper()}", ln=True)
+    pdf.set_font("Arial", size=10)
+    pdf.cell(0, 8, f"DATA: {datetime.now().strftime('%d/%m/%Y')}", ln=True)
+    
+    pdf.ln(5)
+    pdf.set_font("Arial", 'B', 11)
+    pdf.cell(0, 10, "1. METODOLOGIA E ESCOPO TECNICO", ln=True)
+    pdf.set_font("Arial", size=10)
+    # encode/decode para evitar erro de caracteres especiais no PDF simples
+    texto_limpo = escopo.encode('latin-1', 'replace').decode('latin-1')
+    pdf.multi_cell(0, 6, texto_limpo)
+    
+    pdf.ln(5)
+    pdf.set_font("Arial", 'B', 11)
+    pdf.cell(0, 10, "2. DETALHAMENTO DE SERVICOS", ln=True)
+    pdf.set_font("Arial", size=10)
+    for idx, it in enumerate(itens, 1):
+        pdf.cell(0, 7, f"{idx}. {it['serv'].upper()} (x{it['qtd']}) - R$ {it['total']:,.2f}", ln=True)
+
+    pdf.ln(10)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.set_fill_color(240, 240, 240)
+    pdf.cell(0, 12, f"VALOR TOTAL DO INVESTIMENTO: R$ {valor_total:,.2f}  ", ln=True, align='R', fill=True)
+    
+    return pdf.output(dest='S').encode('latin-1')
 
 # =========================================================
 # 2) FUNÇÃO PARA MONTAR O HTML DO ORÇAMENTO (DESIGN A4)
@@ -39,7 +85,6 @@ def montar_layout_proposta(orc_id, r_social, cnpj_val, empreend, local, cuidados
     fotos_html = ""
     if lista_fotos:
         fotos_html += "<br><b style='color:#002d5b; font-size:16px;'>3. RELATÓRIO FOTOGRÁFICO</b><br><br>"
-        # Container Flex para 2 fotos por linha
         fotos_html += '<div style="display: flex; flex-wrap: wrap; gap: 4%;">'
         
         for f_idx, foto in enumerate(lista_fotos):
@@ -71,8 +116,6 @@ def montar_layout_proposta(orc_id, r_social, cnpj_val, empreend, local, cuidados
         color: black; position: relative;
     }}
     .titulo-barra {{ background-color: #002d5b; color: white; text-align: center; padding: 12px; font-weight: bold; margin: 20px 0; }}
-    
-    /* CORREÇÃO DO ESCOPO PARA PARÁGRAFOS */
     .texto-escopo {{ 
         margin: 10px 0 25px 0; 
         text-align: justify; 
@@ -80,7 +123,6 @@ def montar_layout_proposta(orc_id, r_social, cnpj_val, empreend, local, cuidados
         white-space: pre-wrap; 
         word-wrap: break-word;
     }}
-
     @media print {{
         body {{ background: none; padding: 0; }}
         .folha-documento {{ box-shadow: none; margin: 0; width: 100%; min-height: auto; }}
@@ -289,9 +331,7 @@ else:
                     "unidades": f['unidades']
                 }).execute()
             
-            # --- ALTERAÇÃO DA URL ABAIXO ---
-            url_profix = "https://SUA-URL-AQUI.streamlit.app" # <--- ALTERE AQUI PARA O SEU LINK REAL
-            
+            url_profix = "https://pedido.streamlit.app"
             st.success("✅ Orçamento salvo com sucesso!")
             st.code(f"Link: {url_profix}/?id={oid}")
             
@@ -302,3 +342,21 @@ else:
     st.subheader("👁️ Pré-visualização")
     prev = montar_layout_proposta(None, razao, cnpj, emp, loc, ac, escopo, st.session_state.itens, st.session_state.fotos, total)
     st.components.v1.html(prev, height=900, scrolling=True)
+
+    # =========================================================
+    # BOTÃO DE PDF (ADICIONADO)
+    # =========================================================
+    if st.button("📄 Gerar PDF para Download", use_container_width=True):
+        if not razao:
+            st.warning("Preencha a Razão Social para gerar o PDF.")
+        else:
+            try:
+                pdf_bytes = gerar_pdf_profix(razao, escopo, total, st.session_state.itens)
+                st.download_button(
+                    label="📥 Clique aqui para Baixar PDF",
+                    data=pdf_bytes,
+                    file_name=f"Orcamento_{razao.replace(' ', '_')}.pdf",
+                    mime="application/pdf"
+                )
+            except Exception as e:
+                st.error(f"Erro ao gerar PDF: {e}")
