@@ -108,7 +108,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                 .capa-header {{ border-bottom: 4px solid #002d5b; padding-bottom: 20px; }}
                 .capa-titulo {{ font-size: 48px; color: #002d5b; font-weight: 800; margin: 0; line-height: 1; }}
                 .capa-subtitulo {{ font-size: 18px; color: #666; text-transform: uppercase; letter-spacing: 4px; margin-top: 10px; }}
-                .capa-info {{ margin-top: 80px; }}
+                .capa-info {{ margin-top: 40px; }}
                 .capa-label {{ color: #002d5b; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; display: block; }}
                 .capa-valor {{ font-size: 20px; color: #333; margin-bottom: 25px; display: block; }}
                 .capa-footer {{ font-size: 14px; color: #888; border-top: 1px solid #eee; padding-top: 20px; }}
