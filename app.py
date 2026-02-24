@@ -118,10 +118,16 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
             page-break-after: avoid; /* Evita título sozinho no fim da página */
         }
         .texto { 
-            text-align: justify; font-size: 13px; white-space: pre-wrap; 
-            margin-top: 10px; margin-bottom: 10px; line-height: 1.5; 
+            text-align: justify; 
+            font-size: 13px; 
+            /* Mudança aqui: usamos normal para evitar quebras forçadas estranhas */
+            white-space: normal; 
+            margin-top: 10px; 
+            margin-bottom: 15px; 
+            line-height: 1.6; /* Aumenta um pouco o espaço entre linhas para facilitar a leitura */
             color: #444; 
-            orphans: 3; widows: 3; /* Evita linhas isoladas */
+    hyphens: auto; /* Ajuda a separar palavras longas, evitando buracos no justificado */
+       }
         }
         .conteudo-pagina { 
             padding: 0; /* O respiro virá da margem da página @page */
