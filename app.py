@@ -94,7 +94,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
     return f"""
     <html>
     <head>
-            <style>
+<style>
     @media all {
         html, body {
             width: 210mm;
@@ -232,7 +232,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
             display: none !important;
         }
     }
-        </style>
+</style>
     </head>
     <body>
         <button class="no-print" onclick="window.print()">🖨️ GERAR PDF PROFISSIONAL (COM CAPA)</button>
