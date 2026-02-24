@@ -270,8 +270,6 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                 </div>
             </div>
         </div>
-        
-        ...
 
         <div class="conteudo-pagina">
             <table style="width:100%; border-collapse: collapse; margin-bottom: 5px;">
