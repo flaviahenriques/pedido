@@ -94,143 +94,62 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
     return f"""
     <html>
     <head>
-<style>
+        <style>
     @media all {
-        html, body {
-            width: 210mm;
-            height: 297mm;
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            color: #333; 
+            margin: 0; 
+            padding: 0; 
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important; 
+        }
+        .no-print { 
+            background-color: #002d5b; color: white; padding: 12px 24px; 
+            border: none; border-radius: 4px; cursor: pointer; 
+            margin: 20px; font-weight: bold; 
+        }
+        
+        /* Estilos do Conteúdo */
+        .secao-titulo { 
+            color:#002d5b; font-size:14px; text-transform: uppercase; 
+            margin-top: 20px; display:block; border-bottom: 2px solid #002d5b; 
+            padding-bottom:5px; font-weight: bold; 
+            page-break-after: avoid; /* Evita título sozinho no fim da página */
+        }
+        .texto { 
+            text-align: justify; font-size: 13px; white-space: pre-wrap; 
+            margin-top: 10px; margin-bottom: 10px; line-height: 1.5; 
+            color: #444; 
+            orphans: 3; widows: 3; /* Evita linhas isoladas */
+        }
+        .conteudo-pagina { 
+            padding: 0; /* O respiro virá da margem da página @page */
+            page-break-before: always; 
         }
 
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            color: #333;
-            margin: 0;
-            padding: 0;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+        /* Capa */
+        .capa-container { 
+            height: 29.7cm; width: 21cm; display: flex; 
+            page-break-after: always; background-color: white; 
+            overflow: hidden; 
         }
-
-        .no-print {
-            background-color: #002d5b;
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin: 20px;
-            font-weight: bold;
-        }
-
-        /* Corpo do relatório */
-        .secao-titulo {
-            color:#002d5b;
-            font-size:14px;
-            text-transform: uppercase;
-            margin-top: 18px;
-            display:block;
-            border-bottom: 2px solid #002d5b;
-            padding-bottom:5px;
-            font-weight: bold;
-        }
-
-        .texto {
-            text-align: justify;
-            font-size: 13px;
-            white-space: normal;
-            margin-top: 4px;
-            margin-bottom: 6px;
-            line-height: 1.45;
-            color: #444;
-        }
-
-        .conteudo-pagina {
-            padding: 2.2cm 1.5cm 1.5cm 1.5cm;
-        }
-
-        /* CAPA */
-        .capa-container {
-            height: 29.7cm;
-            width: 21cm;
-            display: flex;
-            page-break-after: always;
-            background-color: white;
-            overflow: hidden;
-        }
-
-        .capa-sidebar {
-            width: 30px;
-            background-color: #002d5b;
-            height: 100%;
-        }
-
-        .capa-main {
-            flex: 1;
-            padding: 40px 60px;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-        }
-
-        .capa-header {
-            border-bottom: 4px solid #002d5b;
-            padding-bottom: 15px;
-        }
-
-        .capa-titulo {
-            font-size: 42px;
-            color: #002d5b;
-            font-weight: 800;
-            margin: 0;
-            line-height: 1;
-        }
-
-        .capa-subtitulo {
-            font-size: 16px;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            margin-top: 5px;
-        }
-
-        .capa-info {
-            margin-top: 30px;
-        }
-
-        .capa-label {
-            color: #002d5b;
-            font-size: 11px;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-bottom: 2px;
-            display: block;
-        }
-
-        .capa-valor {
-            font-size: 18px;
-            color: #333;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        .capa-footer {
-            margin-top: auto;
-            margin-bottom: 20px;
-            font-size: 13px;
-            color: #888;
-            border-top: 1px solid #eee;
-            padding-top: 15px;
-        }
+        .capa-sidebar { width: 30px; background-color: #002d5b; height: 100%; }
+        .capa-main { flex: 1; padding: 60px; display: flex; flex-direction: column; }
+        .capa-header { border-bottom: 4px solid #002d5b; padding-bottom: 15px; }
+        .capa-titulo { font-size: 42px; color: #002d5b; font-weight: 800; margin: 0; }
+        .capa-footer { margin-top: auto; font-size: 13px; color: #888; border-top: 1px solid #eee; padding-top: 15px; }
     }
 
-    @page {
-        size: A4;
-        margin: 0;
+    @page { 
+        size: A4; 
+        margin: 2cm 1.5cm; /* Margem superior/inferior de 2cm e laterais de 1.5cm */
     }
 
-    @media print {
-        .no-print {
-            display: none !important;
-        }
+    @media print { 
+        .no-print { display: none !important; }
+        /* Garante que a capa ignore a margem geral de 2cm para preencher a folha */
+        .capa-container { margin: -2cm -1.5cm !important; height: 29.7cm; width: 21cm; }
     }
 </style>
     </head>
@@ -270,6 +189,8 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                 </div>
             </div>
         </div>
+        
+        ...
 
         <div class="conteudo-pagina">
             <table style="width:100%; border-collapse: collapse; margin-bottom: 5px;">
