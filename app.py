@@ -98,20 +98,55 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
             @media all {{
                 body {{ font-family: 'Segoe UI', Arial, sans-serif; color: #333; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
                 .no-print {{ background-color: #002d5b; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; margin: 20px; font-weight: bold; }}
-                .secao-titulo {{ color:#002d5b; font-size:14px; text-transform: uppercase; margin-top: 30px; display:block; border-bottom: 2px solid #002d5b; padding-bottom:5px; font-weight: bold; }}
-                .texto {{ text-align: justify; font-size: 13px; white-space: pre-wrap; margin-top:10px; line-height:1.5; color: #444; }}
-                .conteudo-pagina {{ padding: 40px 50px; page-break-before: always; }}
-                /* Estilos da Capa */
-                .capa-container {{ height: 29.7cm; width: 21cm; display: flex; page-break-after: always; background-color: white; }}
-                .capa-sidebar {{ width: 60px; background-color: #002d5b; height: 100%; }}
-                .capa-main {{ flex: 1; padding: 80px 60px; display: flex; flex-direction: column; justify-content: space-between; }}
-                .capa-header {{ border-bottom: 4px solid #002d5b; padding-bottom: 20px; }}
-                .capa-titulo {{ font-size: 48px; color: #002d5b; font-weight: 800; margin: 0; line-height: 1; }}
-                .capa-subtitulo {{ font-size: 18px; color: #666; text-transform: uppercase; letter-spacing: 4px; margin-top: 10px; }}
-                .capa-info {{ margin-top: 40px; }}
-                .capa-label {{ color: #002d5b; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; display: block; }}
-                .capa-valor {{ font-size: 20px; color: #333; margin-bottom: 25px; display: block; }}
-                .capa-footer {{ font-size: 14px; color: #888; border-top: 1px solid #eee; padding-top: 20px; }}
+                
+                /* Estilos do Corpo do Relatório */
+                .secao-titulo {{ color:#002d5b; font-size:14px; text-transform: uppercase; margin-top: 18px; display:block; border-bottom: 2px solid #002d5b; padding-bottom:5px; font-weight: bold; }}
+                .texto {{ text-align: justify; font-size: 13px; white-space: pre-wrap; margin-top:2px; margin-bottom:2px; line-height:1.3; color: #444; }}
+                .conteudo-pagina {{ padding: 2.5cm 1.5cm 1.5cm 1.5cm; page-break-before: always; }}
+
+                /* AJUSTES DA CAPA PARA NÃO VAZAR FOLHA */
+                .capa-container {{ 
+                    height: 29.7cm; 
+                    width: 21cm; 
+                    display: flex; 
+                    page-break-after: always; 
+                    background-color: white; 
+                    overflow: hidden; /* Garante que nada escape do limite A4 */
+                }}
+                
+                /* 1. DIMINUIR FAIXA AZUL */
+                .capa-sidebar {{ 
+                    width: 30px; /* Reduzi de 60px para 30px */
+                    background-color: #002d5b; 
+                    height: 100%; 
+                }}
+                
+                .capa-main {{ 
+                    flex: 1; 
+                    padding: 40px 60px; /* Reduzi padding de 80px para 40px */
+                    display: flex; 
+                    flex-direction: column; 
+                    justify-content: flex-start; /* Alinha tudo no topo para sobrar espaço embaixo */
+                }}
+                
+                .capa-header {{ border-bottom: 4px solid #002d5b; padding-bottom: 15px; }}
+                .capa-titulo {{ font-size: 42px; color: #002d5b; font-weight: 800; margin: 0; line-height: 1; }}
+                .capa-subtitulo {{ font-size: 16px; color: #666; text-transform: uppercase; letter-spacing: 4px; margin-top: 5px; }}
+                
+                /* 2. SUBIR INFORMAÇÕES DO CLIENTE */
+                .capa-info {{ margin-top: 30px; }} /* Reduzi de 80px para 30px */
+                .capa-label {{ color: #002d5b; font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; display: block; }}
+                .capa-valor {{ font-size: 18px; color: #333; margin-bottom: 15px; display: block; }}
+                
+                /* 3. SUBIR DATA E RODAPÉ */
+                .capa-footer {{ 
+                    margin-top: auto; /* Empurra para o final mas respeita o padding do container */
+                    margin-bottom: 20px; /* Espaço de segurança da borda inferior */
+                    font-size: 13px; 
+                    color: #888; 
+                    border-top: 1px solid #eee; 
+                    padding-top: 15px; 
+                }}
             }}
             @page {{ size: A4; margin: 0; }}
             @media print {{ .no-print {{ display: none !important; }} }}
@@ -124,12 +159,12 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
             <div class="capa-sidebar"></div>
             <div class="capa-main">
                 <div class="capa-header">
-                    <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="220">
-                    <div style="margin-top: 60px;">
-                        <h1 class="capa-titulo">PROPOSTA<br>TÉCNICA</h1>
+                    <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="180">
+                    <div style="margin-top: 30px;"> <h1 class="capa-titulo">PROPOSTA<br>TÉCNICA</h1>
                         <div class="capa-subtitulo">Manutenção e Facilities</div>
                     </div>
                 </div>
+                
                 <div class="capa-info">
                     <span class="capa-label">Preparado para:</span>
                     <span class="capa-valor"><b>{r_social}</b></span>
@@ -138,14 +173,23 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                     <span class="capa-label">Referência:</span>
                     <span class="capa-valor">ORÇAMENTO #{num_exibicao}</span>
                 </div>
+                
                 <div class="capa-footer">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>Rio de Janeiro, {data_hoje}</span>
-                        <span><b>PROFIX</b> | Gestão de Facilities</span>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                        <div>
+                            <b style="color:#002d5b;">Rio de Janeiro</b><br>
+                            {data_hoje}
+                        </div>
+                        <div style="text-align: right;">
+                            <b>PROFIX</b><br>
+                            Gestão de Facilities
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+        
+        ...
 
         <div class="conteudo-pagina">
             <table style="width:100%; border-collapse: collapse; margin-bottom: 5px;">
