@@ -93,7 +93,18 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                 </div>"""
         fotos_html += '</div>'
 
-    itens_html = "".join([f"<div style='display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:8px 0; font-size:14px;'><span><b>{i.get('serv','').upper()}</b> (x{i.get('qtd',1)})</span><b>R$ {float(i.get('total',0)):,.2f}</b></div>" for i in lista_itens])
+    # Lista de Itens para Proposta Completa com Detalhamento
+    itens_html = ""
+    for i in lista_itens:
+        detalhe = i.get('detalhamento', '')
+        itens_html += f"""
+        <div style='margin-bottom:15px; border-bottom:1px solid #eee; padding:8px 0; page-break-inside: avoid;'>
+            <div style='display:flex; justify-content:space-between; font-size:14px;'>
+                <span><b>{i.get('servico','').upper()}</b> (x{i.get('quantidade',1)})</span>
+                <b>R$ {float(i.get('valor_total',0)):,.2f}</b>
+            </div>
+            {f'<div style="font-size:12px; color:#555; margin-top:4px;">{detalhe}</div>' if detalhe else ''}
+        </div>"""
 
     return f"""
     <html>
@@ -180,20 +191,22 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, li
     ano_atual = datetime.now().year
     num_exibicao = f"{ano_atual}-{str(id_orc).zfill(3)}" if id_orc else "PROVISÓRIO"
 
-    # Estilo de itens conforme imagem (descrição à esquerda, valor à direita)
-    itens_html = "".join([
-        f"<div style='margin-bottom: 15px; page-break-inside: avoid;'>"
-        f"<div style='display: flex; justify-content: space-between; align-items: baseline;'>"
-        f"<b style='color: #002d5b; font-size: 15px;'>{idx+1}. {i.get('serv','').upper()}</b>"
-        f"<span style='font-size: 13px; font-weight: bold;'>Qtd: {i.get('qtd',1)}</span>"
-        f"</div>"
-        f"<div style='display: flex; justify-content: space-between; margin-top: 5px; border-bottom: 1px solid #f0f0f0; padding-bottom: 8px;'>"
-        f"<div style='font-size: 12px; color: #555;'>Serviço / Item Avulso | Local: {empreend}</div>"
-        f"<b style='font-size: 15px; color: #333;'>R$ {float(i.get('total',0)):,.2f}</b>"
-        f"</div>"
-        f"</div>"
-        for idx, i in enumerate(lista_itens)
-    ])
+    # Itens formatados exatamente como na imagem do Ajudante
+    itens_html = ""
+    for idx, i in enumerate(lista_itens):
+        detalhe = i.get('detalhamento', '')
+        itens_html += f"""
+        <div style='margin-bottom: 20px; page-break-inside: avoid;'>
+            <div style='display: flex; justify-content: space-between; align-items: baseline;'>
+                <b style='color: #002d5b; font-size: 15px;'>{idx+1}. {i.get('servico','').upper()}</b>
+                <span style='font-size: 13px; font-weight: bold;'>Qtd: {i.get('quantidade',1)}</span>
+            </div>
+            <div style='font-size: 11px; color: #999; margin: 3px 0;'>Diária / Serviço Avulso | Local: {empreend}</div>
+            <div style='display: flex; justify-content: space-between; align-items: flex-start;'>
+                <div style='font-size: 12px; color: #444; flex: 1; padding-right: 20px; text-align: justify;'>{detalhe}</div>
+                <b style='font-size: 15px; color: #333; white-space: nowrap;'>R$ {float(i.get('valor_total',0)):,.2f}</b>
+            </div>
+        </div>"""
 
     fotos_html = ""
     if lista_fotos:
