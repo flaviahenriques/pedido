@@ -60,9 +60,6 @@ def upload_imagem_supabase(foto_obj):
     return None
 
 # =========================================================
-# 2) DESIGN DA PROPOSTA (LAYOUTS HTML COMPLETOS - REVISADO)
-# =========================================================
-# =========================================================
 # 2) DESIGN DA PROPOSTA (LAYOUTS HTML COMPLETOS)
 # =========================================================
 
@@ -102,9 +99,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
     <html>
     <head>
     <style>
-        /* Comando para forçar as cores na impressão */
         * {{ -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
-        
         body {{ font-family: 'Segoe UI', Arial, sans-serif; color: #333; margin: 0; padding: 0; }}
         @media print {{
             .no-print {{ display: none !important; }}
@@ -149,15 +144,16 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                     <td><img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="180"></td>
                     <td style="text-align:right; font-size:10px; color: #666;">
                         <b style="color:#002d5b;">PROFIX GESTÃO DE FACILITIES</b><br>
-                        CNPJ: 52.620.102/0001-03 | Tel: 21 3609-1314<br>
-                        atendimento@profixmanutencao.com
+                        CNPJ: 52.620.102/0001-03<br>
+                        Tel: (21) 3609-1314<br>
+                        Av. Marechal Câmara, 160, Sala 1107 - Centro, Rio de Janeiro - RJ
                     </td>
                 </tr>
             </table>
             <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-weight:bold;">PROPOSTA TÉCNICA COMERCIAL</div>
             <div style="border:1px solid #ddd; padding:15px; margin: 15px 0; font-size:13px; display:flex; background:#f9f9f9 !important;">
-                <div style="flex:1;"><b>CLIENTE:</b> {r_social}<br><b>CNPJ:</b> {cnpj_val}</div>
-                <div style="flex:1; border-left: 1px solid #ddd; padding-left:15px;"><b>REF:</b> {num_exibicao}<br><b>A/C:</b> {cuidados}</div>
+                <div style="flex:1;"><b>CLIENTE:</b> {r_social}<br><b>CNPJ:</b> {cnpj_val}<br><b>EMPREENDIMENTO:</b> {empreend}</div>
+                <div style="flex:1; border-left: 1px solid #ddd; padding-left:15px;"><b>REF:</b> {num_exibicao}<br><b>A/C:</b> {cuidados}<br><b>LOCAL:</b> {local if local else "-"}</div>
             </div>
             <b class="secao-titulo">1. METODOLOGIA E ESCOPO TÉCNICO</b><div class="texto">{s1}</div>
             <b class="secao-titulo">2. MATERIAIS INCLUSOS</b><div class="texto">{s2}</div>
@@ -249,13 +245,18 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, li
             </div>
         </div>
         <div class="conteudo-pagina">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
-                <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="150">
-                <div style="text-align:right;">
-                    <b style="color:#002d5b; font-size:18px;">DEMONSTRATIVO DE CUSTOS</b><br>
-                    <small>Ref: {num_exibicao}</small>
-                </div>
-            </div>
+            <table style="width:100%; margin-bottom: 20px;">
+                <tr>
+                    <td><img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="150"></td>
+                    <td style="text-align:right; font-size:10px; color: #666;">
+                        <b style="color:#002d5b;">PROFIX GESTÃO DE FACILITIES</b><br>
+                        CNPJ: 52.620.102/0001-03<br>
+                        Tel: (21) 3609-1314<br>
+                        Av. Marechal Câmara, 160, Sala 1107 - Centro, Rio de Janeiro - RJ
+                    </td>
+                </tr>
+            </table>
+            <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-weight:bold;">DEMONSTRATIVO DE CUSTOS</div>
             <table style="width:100%; border-collapse:collapse; margin-top:20px;">
                 <thead>
                     <tr style="background:#002d5b !important; color:white !important;">
