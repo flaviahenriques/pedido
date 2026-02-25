@@ -93,7 +93,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                 </div>"""
         fotos_html += '</div>'
 
-    # Lista de Itens para Proposta Completa com Detalhamento
+    # Lista de Itens para Proposta COMPLETA com campo de detalhamento
     itens_html = ""
     for i in lista_itens:
         detalhe = i.get('detalhamento', '')
@@ -103,7 +103,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                 <span><b>{i.get('servico','').upper()}</b> (x{i.get('quantidade',1)})</span>
                 <b>R$ {float(i.get('valor_total',0)):,.2f}</b>
             </div>
-            {f'<div style="font-size:12px; color:#555; margin-top:4px;">{detalhe}</div>' if detalhe else ''}
+            {f'<div style="font-size:12px; color:#555; margin-top:4px; text-align:justify;">{detalhe}</div>' if detalhe else ''}
         </div>"""
 
     return f"""
@@ -191,7 +191,7 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, li
     ano_atual = datetime.now().year
     num_exibicao = f"{ano_atual}-{str(id_orc).zfill(3)}" if id_orc else "PROVISÓRIO"
 
-    # Itens formatados exatamente como na imagem do Ajudante
+    # ITENS SIMPLIFICADOS: Formatação exata com Detalhamento abaixo do título
     itens_html = ""
     for idx, i in enumerate(lista_itens):
         detalhe = i.get('detalhamento', '')
@@ -201,9 +201,11 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, li
                 <b style='color: #002d5b; font-size: 15px;'>{idx+1}. {i.get('servico','').upper()}</b>
                 <span style='font-size: 13px; font-weight: bold;'>Qtd: {i.get('quantidade',1)}</span>
             </div>
-            <div style='font-size: 11px; color: #999; margin: 3px 0;'>Diária / Serviço Avulso | Local: {empreend}</div>
+            <div style='font-size: 11px; color: #999; margin: 3px 0;'>Serviço Avulso | Local: {empreend}</div>
             <div style='display: flex; justify-content: space-between; align-items: flex-start;'>
-                <div style='font-size: 12px; color: #444; flex: 1; padding-right: 20px; text-align: justify;'>{detalhe}</div>
+                <div style='font-size: 12px; color: #555; flex: 1; padding-right: 20px; text-align: justify; line-height: 1.4;'>
+                    {detalhe}
+                </div>
                 <b style='font-size: 15px; color: #333; white-space: nowrap;'>R$ {float(i.get('valor_total',0)):,.2f}</b>
             </div>
         </div>"""
