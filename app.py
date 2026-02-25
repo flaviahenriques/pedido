@@ -206,6 +206,127 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
     </body>
     </html>
     """
+    def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, lista_itens, lista_fotos, valor_total):
+    data_hoje = datetime.now().strftime("%d/%m/%Y")
+    ano_atual = datetime.now().year
+    num_exibicao = f"{ano_atual}-{str(id_orc).zfill(3)}" if id_orc else "PROVISÓRIO"
+
+    # Gerar linhas da tabela de serviços
+    itens_html = "".join([
+        f"<tr>"
+        f"<td style='padding:12px; border-bottom:1px solid #eee;'><b>{i.get('serv','').upper()}</b></td>"
+        f"<td style='padding:12px; border-bottom:1px solid #eee; text-align:center;'>{i.get('qtd',1)}</td>"
+        f"<td style='padding:12px; border-bottom:1px solid #eee; text-align:right;'><b>R$ {float(i.get('total',0)):,.2f}</b></td>"
+        f"</tr>" 
+        for i in lista_itens
+    ])
+
+    # Relatório fotográfico simplificado
+    fotos_html = ""
+    if lista_fotos:
+        fotos_html = '<div style="margin-top:40px;"><b style="color:#002d5b; border-bottom:2px solid #002d5b; display:block; padding-bottom:5px;">REGISTRO FOTOGRÁFICO</b>'
+        fotos_html += '<div style="display:flex; flex-wrap:wrap; gap:15px; margin-top:15px;">'
+        for f in lista_fotos:
+            img_src = ""
+            if f.get('url_foto') and str(f['url_foto']).startswith("http"):
+                img_src = transformar_url_em_base64(f['url_foto'])
+            elif 'file' in f:
+                try:
+                    b64 = base64.b64encode(f['file'].getvalue()).decode()
+                    img_src = f"data:image/png;base64,{b64}"
+                except: img_src = ""
+            
+            if img_src:
+                fotos_html += f"""
+                <div style="width:31%; border:1px solid #ddd; border-radius:4px; padding:5px; page-break-inside: avoid;">
+                    <img src="{img_src}" style="width:100%; height:140px; object-fit:cover; border-radius:2px;">
+                    <p style="font-size:10px; text-align:center; margin:5px 0; font-weight:bold; color:#002d5b;">{f.get('nome','')}</p>
+                </div>"""
+        fotos_html += '</div></div>'
+
+    return f"""
+    <html>
+    <head>
+    <style>
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; color: #333; }}
+        @media print {{
+            .no-print {{ display: none !important; }}
+            @page {{ size: A4; margin: 1.5cm; }}
+            .capa-container {{ margin: -1.5cm !important; height: 29.7cm; width: 21cm; page-break-after: always; }}
+            .conteudo-pagina {{ page-break-before: always; padding: 20px; }}
+        }}
+        .no-print {{ background: #002d5b; color: white; padding: 15px; border: none; border-radius: 5px; cursor: pointer; margin: 20px; font-weight: bold; }}
+        
+        /* Estilo da Capa (Igual à completa) */
+        .capa-container {{ display: flex; height: 100vh; background: white; border-left: 30px solid #002d5b; }}
+        .capa-main {{ flex: 1; padding: 80px 60px; display: flex; flex-direction: column; }}
+        .capa-titulo {{ font-size: 50px; color: #002d5b; font-weight: 900; line-height: 1; margin: 40px 0; }}
+        .capa-info {{ margin-top: 50px; font-size: 16px; line-height: 2; }}
+        .capa-label {{ color: #888; text-transform: uppercase; font-size: 12px; display: block; }}
+        .capa-valor {{ color: #333; font-size: 18px; margin-bottom: 20px; display: block; }}
+    </style>
+    </head>
+    <body>
+        <button class="no-print" onclick="window.print()">🖨️ IMPRIMIR ORÇAMENTO SIMPLES</button>
+
+        <div class="capa-container">
+            <div class="capa-main">
+                <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="220">
+                <h1 class="capa-titulo">ORÇAMENTO<br>DE SERVIÇOS</h1>
+                <div class="capa-info">
+                    <span class="capa-label">Cliente</span>
+                    <span class="capa-valor"><b>{r_social}</b></span>
+                    <span class="capa-label">Empreendimento</span>
+                    <span class="capa-valor">{empreend}</span>
+                    <span class="capa-label">Referência</span>
+                    <span class="capa-valor">#{num_exibicao}</span>
+                </div>
+                <div style="margin-top: auto; display: flex; justify-content: space-between; border-top: 1px solid #eee; padding-top: 20px;">
+                    <div><b>Rio de Janeiro</b><br>{data_hoje}</div>
+                    <div style="text-align: right;"><b>PROFIX</b></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="conteudo-pagina">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+                <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="150">
+                <div style="text-align:right;">
+                    <b style="color:#002d5b; font-size:18px;">DEMONSTRATIVO DE CUSTOS</b><br>
+                    <small>Ref: {num_exibicao}</small>
+                </div>
+            </div>
+
+            <table style="width:100%; border-collapse:collapse; margin-top:20px;">
+                <thead>
+                    <tr style="background:#002d5b; color:white;">
+                        <th style="padding:12px; text-align:left;">DESCRIÇÃO DOS SERVIÇOS / ITENS</th>
+                        <th style="padding:12px;">QTD</th>
+                        <th style="padding:12px; text-align:right;">TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody>{itens_html}</tbody>
+            </table>
+
+            <div style="margin-top:30px; display:flex; justify-content:flex-end;">
+                <div style="background:#f1f4f9; padding:20px; border-left:8px solid #002d5b; text-align:right; min-width:250px;">
+                    <span style="color:#666; font-size:12px;">VALOR TOTAL DO INVESTIMENTO</span><br>
+                    <b style="font-size:26px; color:#002d5b;">R$ {valor_total:,.2f}</b>
+                </div>
+            </div>
+
+            {fotos_html}
+
+            <div style="margin-top:50px; font-size:11px; color:#999; border-top:1px solid #eee; padding-top:10px;">
+                <b>NOTAS GERAIS:</b><br>
+                1. Validade desta proposta: 10 dias úteis.<br>
+                2. Impostos inclusos conforme legislação vigente.<br>
+                3. O início dos serviços está condicionado à aprovação formal deste documento.
+            </div>
+        </div>
+    </body>
+    </html>
+    """
 # =========================================================
 # 3) INTERFACE
 # =========================================================
@@ -374,3 +495,23 @@ Validade da Proposta: 30 dias."""
     st.divider()
     html_gerado = montar_layout_proposta(st.session_state.edit_id, razao, cnpj_val, emp_val, loc_val, ac_val, escopo_final, st.session_state.itens, st.session_state.fotos, total_proposta)
     st.components.v1.html(html_gerado, height=1500, scrolling=True)
+st.subheader("⚙️ Configuração da Impressão")
+
+formato = st.radio(
+    "Escolha o formato do documento:",
+    ["Proposta Técnica Completa", "Orçamento Simples (Direto)"],
+    horizontal=True
+)
+
+if formato == "Orçamento Simples (Direto)":
+    html_final = montar_layout_simplificado_com_capa(
+        st.session_state.edit_id, razao, cnpj_val, emp_val, 
+        st.session_state.itens, st.session_state.fotos, total_proposta
+    )
+else:
+    html_final = montar_layout_proposta(
+        st.session_state.edit_id, razao, cnpj_val, emp_val, loc_val, 
+        ac_val, escopo_final, st.session_state.itens, st.session_state.fotos, total_proposta
+    )
+
+st.components.v1.html(html_final, height=1200, scrolling=True)
