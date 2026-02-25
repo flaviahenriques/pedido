@@ -526,30 +526,20 @@ Validade da Proposta: 30 dias."""
                 oid = res.data[0]['id']
                 st.session_state.edit_id = oid
 
-            # SALVA NO BANCO USANDO AS COLUNAS CORRETAS
-            for i in st.session_state.itens: 
-                supabase.table("itens_orcamento").insert({
-                    "orcamento_id": oid, 
-                    "servico": i['serv'], 
-                    "detalhamento": i.get('detalhe', ''), 
-                    "quantidade": i['qtd'], 
-                    "valor_unitario": i.get('v_unit', 0),
-                    "valor_total": i['total']
-                }).execute()
-
-            for f in st.session_state.fotos: 
-                url_final = upload_imagem_supabase(f)
-                if url_final:
-                    supabase.table("fotos_relatorio").insert({"orcamento_id": oid, "nome_item": f['nome'], "url_foto": url_final}).execute()
-            st.success("✅ Orçamento salvo com sucesso!")
-
-    st.divider()
+          st.divider()
     formato = st.radio("Escolha o formato:", ["Proposta Técnica Completa", "Orçamento Simples (Direto)"], horizontal=True)
 
     if formato == "Orçamento Simples (Direto)":
-        html_final = montar_layout_simplificado_com_capa(st.session_state.edit_id, razao, cnpj_val, emp_val, st.session_state.itens, st.session_state.fotos, total_proposta)
+        # CORREÇÃO AQUI: Adicionado loc_val e ac_val para bater com a nova definição da função
+        html_final = montar_layout_simplificado_com_capa(
+            st.session_state.edit_id, razao, cnpj_val, emp_val, loc_val, ac_val, 
+            st.session_state.itens, st.session_state.fotos, total_proposta
+        )
     else:
-        # Passando os itens para o layout HTML
-        html_final = montar_layout_proposta(st.session_state.edit_id, razao, cnpj_val, emp_val, loc_val, ac_val, escopo_final, st.session_state.itens, st.session_state.fotos, total_proposta)
+        # Aqui já estava correto
+        html_final = montar_layout_proposta(
+            st.session_state.edit_id, razao, cnpj_val, emp_val, loc_val, ac_val, 
+            escopo_final, st.session_state.itens, st.session_state.fotos, total_proposta
+        )
 
     st.components.v1.html(html_final, height=1200, scrolling=True)
