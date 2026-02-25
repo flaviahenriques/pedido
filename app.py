@@ -63,40 +63,15 @@ def upload_imagem_supabase(foto_obj):
 # 2) DESIGN DA PROPOSTA (LAYOUTS HTML COMPLETOS)
 # =========================================================
 
-def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados, escopo, lista_itens, lista_fotos, valor_total):
+def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, lista_itens, lista_fotos, valor_total):
     data_hoje = datetime.now().strftime("%d/%m/%Y")
     ano_atual = datetime.now().year
-    partes = escopo.split("|||")
-    while len(partes) < 4: partes.append("")
-    s1, s2, s3, s4 = partes[0], partes[1], partes[2], partes[3]
     num_exibicao = f"{ano_atual}-{str(id_orc).zfill(3)}" if id_orc else "PROVISÓRIO"
 
-    fotos_html = ""
-    if lista_fotos:
-        fotos_html += '<b class="secao-titulo">4. RELATÓRIO FOTOGRÁFICO</b>'
-        fotos_html += '<div style="display: flex; flex-wrap: wrap; gap: 2%; margin-top: 15px;">'
-        for f in lista_fotos:
-            img_src = ""
-            if f.get('url_foto') and str(f['url_foto']).startswith("http"):
-                img_src = transformar_url_em_base64(f['url_foto'])
-            elif 'file' in f:
-                try:
-                    b64 = base64.b64encode(f['file'].getvalue()).decode()
-                    img_src = f"data:image/png;base64,{b64}"
-                except: img_src = ""
-            
-            if img_src:
-                fotos_html += f"""
-                <div style="width: 48%; margin-bottom:20px; page-break-inside: avoid;">
-                    <img src="{img_src}" style="width:100%; height:250px; object-fit: cover; border:1px solid #ddd; border-radius:5px;">
-                    <p style="text-align:center; font-size:11px; font-weight:bold; color:#002d5b; margin-top:5px;">{f.get('nome','Item')}</p>
-                </div>"""
-        fotos_html += '</div>'
-
-    # --- LISTA DE ITENS CORRIGIDA (AZUL PROFIX E SEM "TÓPICO") ---
+    # ITENS SIMPLIFICADOS: Ajustado para as novas chaves serv, detalhe, v_unit
     itens_html = ""
     for idx, i in enumerate(lista_itens):
-        # Mapeamento para aceitar dados da memória ou do banco (conforme sua instrução de colunas)
+        # Mapeamento de chaves para garantir que o nome apareça (memória ou banco)
         nome_serv = i.get('serv') or i.get('servico') or "Serviço"
         detalhe = i.get('detalhe') or i.get('detalhamento') or ""
         qtd = i.get('qtd') or i.get('quantidade') or 1
@@ -104,61 +79,76 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
         v_total = i.get('total') or i.get('valor_total') or 0
 
         itens_html += f"""
-        <div style='margin-bottom:15px; border-bottom:1px solid #eee; padding:8px 0; page-break-inside: avoid;'>
-            <div style='display:flex; justify-content:space-between; align-items: baseline;'>
-                <span style="font-size:14px;">
-                    <b style="color:#002d5b;">{nome_serv.upper()}</b> 
-                    <small style="color:#777; margin-left:10px;">(Qtd: {qtd} x R$ {float(v_unit):,.2f})</small>
-                </span>
-                <b style="font-size:14px; color:#333;">R$ {float(v_total):,.2f}</b>
+        <div style='margin-bottom: 20px; page-break-inside: avoid;'>
+            <div style='display: flex; justify-content: space-between; align-items: baseline;'>
+                <b style='color: #002d5b; font-size: 15px;'>{nome_serv.upper()}</b>
+                <span style='font-size: 13px; font-weight: bold;'>Qtd: {qtd} x R$ {float(v_unit):,.2f}</span>
             </div>
-            {f'<div style="font-size:12px; color:#555; margin-top:4px; text-align:justify; line-height:1.4;">{detalhe}</div>' if detalhe else ''}
+            <div style='font-size: 11px; color: #999; margin: 3px 0;'>Serviço Avulso | Local: {empreend}</div>
+            <div style='display: flex; justify-content: space-between; align-items: flex-start;'>
+                <div style='font-size: 12px; color: #555; flex: 1; padding-right: 20px; text-align: justify; line-height: 1.4;'>
+                    {detalhe}
+                </div>
+                <b style='font-size: 15px; color: #333; white-space: nowrap;'>R$ {float(v_total):,.2f}</b>
+            </div>
         </div>"""
+
+    fotos_html = ""
+    if lista_fotos:
+        fotos_html = '<b style="color:#002d5b; border-bottom:2px solid #002d5b; display:block; margin-top:30px; padding-bottom:5px; font-size:14px; text-transform:uppercase; font-weight:bold;">REGISTRO FOTOGRÁFICO</b>'
+        fotos_html += '<div style="display:flex; flex-wrap:wrap; gap:15px; margin-top:15px;">'
+        for f in lista_fotos:
+            img_src = transformar_url_em_base64(f['url_foto']) if f.get('url_foto') else ""
+            if img_src:
+                fotos_html += f"""
+                <div style="width:31%; border:1px solid #ddd; border-radius:4px; padding:5px; page-break-inside: avoid;">
+                    <img src="{img_src}" style="width:100%; height:140px; object-fit:cover; border-radius:2px;">
+                    <p style="font-size:10px; text-align:center; margin:5px 0; font-weight:bold; color:#002d5b;">{f.get('nome','')}</p>
+                </div>"""
+        fotos_html += '</div>'
 
     return f"""
     <html>
     <head>
     <style>
         * {{ -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
-        body {{ font-family: 'Segoe UI', Arial, sans-serif; color: #333; margin: 0; padding: 0; }}
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; color: #333; }}
         @media print {{
             .no-print {{ display: none !important; }}
             @page {{ size: A4; margin: 1.5cm; }}
             .capa-container {{ margin: -1.5cm !important; height: 29.7cm; width: 21cm; page-break-after: always; }}
-            .conteudo-pagina {{ page-break-before: always; }}
+            .conteudo-pagina {{ page-break-before: always; padding: 20px; }}
         }}
-        .no-print {{ background: #002d5b; color: white; padding: 15px 30px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin: 20px; }}
+        .no-print {{ background: #002d5b; color: white; padding: 15px; border: none; border-radius: 5px; cursor: pointer; margin: 20px; font-weight: bold; }}
         .capa-container {{ display: flex; height: 100vh; background: white; border-left: 30px solid #002d5b; }}
         .capa-main {{ flex: 1; padding: 80px 60px; display: flex; flex-direction: column; }}
         .capa-titulo {{ font-size: 50px; color: #002d5b; font-weight: 900; line-height: 1; margin: 40px 0; }}
         .capa-info {{ margin-top: 50px; font-size: 16px; line-height: 2; }}
-        .capa-label {{ color: #888; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; display: block; }}
+        .capa-label {{ color: #888; text-transform: uppercase; font-size: 12px; display: block; }}
         .capa-valor {{ color: #333; font-size: 18px; margin-bottom: 20px; display: block; }}
-        .secao-titulo {{ color:#002d5b; font-size:14px; text-transform: uppercase; margin-top: 25px; display:block; border-bottom: 2px solid #002d5b; padding-bottom:5px; font-weight: bold; }}
-        .texto {{ text-align: justify; font-size: 13px; white-space: pre-wrap; margin: 10px 0; line-height: 1.6; color: #444; }}
     </style>
     </head>
     <body>
-        <button class="no-print" onclick="window.print()">🖨️ GERAR PDF / IMPRIMIR PROPOSTA</button>
+        <button class="no-print" onclick="window.print()">🖨️ IMPRIMIR ORÇAMENTO SIMPLES</button>
         <div class="capa-container">
             <div class="capa-main">
                 <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="220">
-                <h1 class="capa-titulo">PROPOSTA<br>TÉCNICA<br><small style="font-size: 25px;">COMERCIAL</small></h1>
+                <h1 class="capa-titulo">ORÇAMENTO<br>DE SERVIÇOS</h1>
                 <div class="capa-info">
                     <span class="capa-label">Cliente</span>
                     <span class="capa-valor"><b>{r_social}</b></span>
                     <span class="capa-label">Empreendimento</span>
                     <span class="capa-valor">{empreend}</span>
                     <span class="capa-label">Referência</span>
-                    <span class="capa-valor">ORÇAMENTO #{num_exibicao}</span>
+                    <span class="capa-valor">#{num_exibicao}</span>
                 </div>
-                <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid #eee; padding-top: 20px;">
-                    <div><b style="color:#002d5b;">Rio de Janeiro</b><br>{data_hoje}</div>
-                    <div style="text-align: right;"><b>PROFIX</b><br>Gestão de Facilities</div>
+                <div style="margin-top: auto; display: flex; justify-content: space-between; border-top: 1px solid #eee; padding-top: 20px;">
+                    <div><b>Rio de Janeiro</b><br>{data_hoje}</div>
+                    <div style="text-align: right;"><b>PROFIX</b></div>
                 </div>
             </div>
         </div>
-        <div class="conteudo-pagina" style="padding: 20px;">
+        <div class="conteudo-pagina">
             <table style="width:100%; margin-bottom: 20px;">
                 <tr>
                     <td><img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="180"></td>
@@ -170,26 +160,38 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                     </td>
                 </tr>
             </table>
-            <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-weight:bold;">PROPOSTA TÉCNICA COMERCIAL</div>
-            <div style="border:1px solid #ddd; border-left: 8px solid #002d5b !important; padding:15px; margin: 15px 0; font-size:13px; display:flex; background:#f9f9f9 !important;">
-                <div style="flex:1;"><b>RAZÃO SOCIAL:</b> {r_social}<br><b>CNPJ:</b> {cnpj_val}<br><b>EMPREENDIMENTO:</b> {empreend}</div>
-                <div style="flex:1; border-left: 1px solid #ddd; padding-left:15px;"><b>ENDEREÇO DO EMPREENDIMENTO:</b> {local if local else "-"}<br><b>A/C:</b> {cuidados}</div>
-            </div>
-            <b class="secao-titulo">1. METODOLOGIA E ESCOPO TÉCNICO</b><div class="texto">{s1}</div>
-            <b class="secao-titulo">2. MATERIAIS INCLUSOS</b><div class="texto">{s2}</div>
-            <b class="secao-titulo">3. ATENDIMENTO E SUPORTE</b><div class="texto">{s3}</div>
-            {fotos_html}
-            <div style="page-break-inside: avoid; margin-top: 30px;">
-                <b class="secao-titulo">5. INVESTIMENTO MENSAL / GLOBAL</b>
-                <div style="margin: 15px 0;">{itens_html}</div>
-                <div style="display: flex; justify-content: flex-end;">
-                    <div style="background:#f1f4f9 !important; padding:25px; border-left:8px solid #002d5b !important; text-align:right; width: 300px;">
-                        <small style="color:#666;">TOTAL DO INVESTIMENTO</small><br>
-                        <b style="font-size:28px; color:#002d5b;">R$ {valor_total:,.2f}</b>
-                    </div>
+            
+            <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-weight:bold; text-transform:uppercase;">Proposta Técnica Comercial</div>
+            <div style="text-align: right; font-size: 11px; margin: 10px 0;">Rio de Janeiro, {data_hoje}</div>
+
+            <div style="border:1px solid #ddd; border-left: 8px solid #002d5b !important; padding:15px; margin: 15px 0; font-size:12px; display:flex; background:#f9f9f9 !important; line-height: 1.5;">
+                <div style="flex:1.2;">
+                    <b style="color:#666; font-size:10px;">RAZÃO SOCIAL:</b><br><b>{r_social}</b><br><br>
+                    <b style="color:#666; font-size:10px;">CNPJ:</b><br>{cnpj_val}<br><br>
+                    <b style="color:#666; font-size:10px;">EMPREENDIMENTO:</b><br>{empreend}
                 </div>
-                <div style="font-size:11px; color:#777; margin-top: 15px; white-space: pre-wrap;">{s4}</div>
+                <div style="flex:1; border-left: 1px solid #ddd; padding-left:15px;">
+                    <b style="color:#666; font-size:10px;">ENDEREÇO DO EMPREENDIMENTO:</b><br>-<br><br>
+                    <b style="color:#666; font-size:10px;">A/C:</b><br>Equipe Administrativa
+                </div>
             </div>
+
+            <div style="margin-top: 25px;">
+                {itens_html}
+            </div>
+
+            <div style="margin-top:30px; display:flex; justify-content:space-between; align-items: flex-end; page-break-inside: avoid;">
+                <div style="font-size:11px; color:#555;">
+                    <b style="color:#333;">CONDIÇÕES GERAIS:</b><br>
+                    • Validade da Proposta: 10 dias úteis.<br>
+                    • Pagamento conforme contrato.
+                </div>
+                <div style="background:#f1f4f9 !important; padding:20px; border-left:8px solid #002d5b !important; text-align:right; min-width:250px;">
+                    <span style="color:#666; font-size:12px;">TOTAL DO INVESTIMENTO</span><br>
+                    <b style="font-size:26px; color:#002d5b;">R$ {valor_total:,.2f}</b>
+                </div>
+            </div>
+            {fotos_html}
         </div>
     </body>
     </html>
