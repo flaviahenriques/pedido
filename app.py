@@ -371,7 +371,6 @@ with tab_nova:
 
     with st.expander("2. Escopo Técnico (PROFIX)", expanded=True):
         p_esc = esc_db.split("|||")
-        # Se for novo ou escopo estiver vazio, carrega o texto padrão completo
         if not st.session_state.edit_id and (len(p_esc) < 2 or p_esc[0].strip() == ""):
             p_esc = [
                 """A PROFIX atuará com foco na preservação do padrão estético e na manutenção da integridade das instalações, assegurando que os apartamentos decorados e estandes de vendas mantenham-se em estado de 'novo' e prontos para visitação. Nossa metodologia prioriza a conservação detalhada para que o ambiente reflita fielmente a qualidade do projeto original, compreendendo:
@@ -450,21 +449,21 @@ Validade da Proposta: 30 dias."""
                 st.rerun()
 
         st.divider()
-        # --- ÁREA DE ADIÇÃO DE ITENS COM DETALHAMENTO ---
+        st.subheader("Adicionar Itens")
+        
         ci1, ci2, ci3 = st.columns([2, 1, 1])
         with ci1:
-            it_n = st.selectbox("Profissional/Serviço", ["Ajudante", "Montador", "Eletricista", "Limpeza", "Outros"])
+            it_n = st.selectbox("Profissional", ["Ajudante", "Montador", "Eletricista", "Limpeza", "Outros"])
         
-        # Sugestões rápidas
         sugestoes = {
-            "Ajudante": "Atuação na movimentação de volumes, apoio na carga e descarga e suporte logístico geral.",
-            "Montador": "Montagem e desmontagem de mobiliário corporativo e estações de trabalho.",
-            "Eletricista": "Serviços de infraestrutura elétrica, revisão de fiação e pontos de energia.",
-            "Limpeza": "Execução de limpeza técnica e remoção de resíduos.",
+            "Ajudante": "Atuação na movimentação de volumes e suporte logístico geral.",
+            "Montador": "Montagem e desmontagem de mobiliário corporativo conforme layout.",
+            "Eletricista": "Manutenção preventiva de iluminação e pontos de energia.",
+            "Limpeza": "Limpeza técnica e conservação estética de ambientes.",
             "Outros": ""
         }
 
-        it_detalhe = st.text_area("Detalhamento técnico do serviço", value=sugestoes.get(it_n, ""), height=100)
+        it_detalhe = st.text_area("Detalhamento técnico", value=sugestoes.get(it_n, ""), height=100)
 
         with ci2:
             it_q = st.number_input("Qtd", min_value=1, value=1)
@@ -474,18 +473,22 @@ Validade da Proposta: 30 dias."""
         if st.button("➕ Adicionar Item"): 
             st.session_state.itens.append({
                 "serv": it_n, 
-                "detalhamento": it_detalhe, 
+                "detalhe": it_detalhe, 
                 "qtd": it_q, 
                 "v_unit": it_v,
                 "total": it_q * it_v
             })
             st.rerun()
             
+        # LISTAGEM COM TÍTULO EM AZUL
         for i_idx, it in enumerate(st.session_state.itens):
             c_it1, c_it2, c_it3 = st.columns([4, 1, 0.5])
             with c_it1:
-                st.markdown(f"**{it['serv']}**")
-                st.caption(it.get('detalhamento', ''))
+                # Aqui forçamos a cor azul e o nome do profissional em destaque
+                st.markdown(f"<span style='color:#1E90FF; font-weight:bold;'>Tópico {i_idx + 1}: {it['serv']}</span>", unsafe_allow_html=True)
+                if it.get('detalhe'):
+                    st.write(it['detalhe'])
+            
             c_it2.write(f"R$ {it['total']:,.2f}")
             if c_it3.button("❌", key=f"del_it_{i_idx}"): 
                 st.session_state.itens.pop(i_idx)
@@ -496,14 +499,10 @@ Validade da Proposta: 30 dias."""
     if st.button("💾 SALVAR PROPOSTA NO SISTEMA", type="primary", use_container_width=True):
         with st.spinner("Salvando..."):
             payload = {
-                "cliente_razao_social": razao, 
-                "cliente_cnpj": cnpj_val, 
-                "empreendimento": emp_val, 
-                "localizacao": loc_val, 
-                "aos_cuidados": ac_val, 
-                "valor_total": total_proposta, 
-                "metodologia_escopo": escopo_final, 
-                "status": "Enviado"
+                "cliente_razao_social": razao, "cliente_cnpj": cnpj_val, 
+                "empreendimento": emp_val, "localizacao": loc_val, 
+                "aos_cuidados": ac_val, "valor_total": total_proposta, 
+                "metodologia_escopo": escopo_final, "status": "Enviado"
             }
             
             if st.session_state.edit_id:
@@ -516,12 +515,12 @@ Validade da Proposta: 30 dias."""
                 oid = res.data[0]['id']
                 st.session_state.edit_id = oid
 
-            # SALVANDO ITENS COM AS COLUNAS DO SUPABASE (detalhamento, valor_unitario)
+            # SALVA NO BANCO USANDO AS COLUNAS CORRETAS
             for i in st.session_state.itens: 
                 supabase.table("itens_orcamento").insert({
                     "orcamento_id": oid, 
                     "servico": i['serv'], 
-                    "detalhamento": i.get('detalhamento', ''), 
+                    "detalhamento": i.get('detalhe', ''), 
                     "quantidade": i['qtd'], 
                     "valor_unitario": i.get('v_unit', 0),
                     "valor_total": i['total']
@@ -530,19 +529,16 @@ Validade da Proposta: 30 dias."""
             for f in st.session_state.fotos: 
                 url_final = upload_imagem_supabase(f)
                 if url_final:
-                    supabase.table("fotos_relatorio").insert({
-                        "orcamento_id": oid, 
-                        "nome_item": f['nome'], 
-                        "url_foto": url_final
-                    }).execute()
+                    supabase.table("fotos_relatorio").insert({"orcamento_id": oid, "nome_item": f['nome'], "url_foto": url_final}).execute()
             st.success("✅ Orçamento salvo com sucesso!")
 
     st.divider()
-    formato = st.radio("Escolha o formato de exibição:", ["Proposta Técnica Completa", "Orçamento Simples (Direto)"], horizontal=True)
+    formato = st.radio("Escolha o formato:", ["Proposta Técnica Completa", "Orçamento Simples (Direto)"], horizontal=True)
 
     if formato == "Orçamento Simples (Direto)":
         html_final = montar_layout_simplificado_com_capa(st.session_state.edit_id, razao, cnpj_val, emp_val, st.session_state.itens, st.session_state.fotos, total_proposta)
     else:
+        # Passando os itens para o layout HTML
         html_final = montar_layout_proposta(st.session_state.edit_id, razao, cnpj_val, emp_val, loc_val, ac_val, escopo_final, st.session_state.itens, st.session_state.fotos, total_proposta)
 
     st.components.v1.html(html_final, height=1200, scrolling=True)
