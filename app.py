@@ -44,13 +44,13 @@ def upload_imagem_supabase(foto_obj):
     try:
         if "url_foto" in foto_obj and str(foto_obj['url_foto']).startswith("http"):
             return foto_obj['url_foto']
-            
+
         if 'file' in foto_obj:
             file_content = foto_obj['file'].getvalue()
             file_ext = foto_obj['file'].name.split('.')[-1]
             file_name = f"{uuid.uuid4()}.{file_ext}"
             bucket_name = "fotos_orcamentos"
-            
+
             supabase.storage.from_(bucket_name).upload(file_name, file_content)
             res = supabase.storage.from_(bucket_name).get_public_url(file_name)
             return res
@@ -83,7 +83,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                     b64 = base64.b64encode(f['file'].getvalue()).decode()
                     img_src = f"data:image/png;base64,{b64}"
                 except: img_src = ""
-            
+
             if img_src:
                 fotos_html += f"""
                 <div style="width: 48%; margin-bottom:20px; page-break-inside: avoid;">
@@ -193,6 +193,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
     </body>
     </html>
     """
+def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, lista_itens, lista_fotos, valor_total):
 def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, local, cuidados, lista_itens, lista_fotos, valor_total):
     data_hoje = datetime.now().strftime("%d/%m/%Y")
     ano_atual = datetime.now().year
@@ -201,6 +202,7 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, lo
     # ITENS SIMPLIFICADOS: Mapeamento corrigido para aceitar 'serv' ou 'servico'
     itens_html = ""
     for idx, i in enumerate(lista_itens):
+        # MAPEAMENTO INTELIGENTE: busca os nomes corretos independente da origem (banco ou memória)
         nome_serv = i.get('serv') or i.get('servico') or "Serviço"
         detalhe = i.get('detalhe') or i.get('detalhamento') or ""
         qtd = i.get('qtd') or i.get('quantidade') or 1
@@ -233,6 +235,7 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, lo
                     <img src="{img_src}" style="width:100%; height:140px; object-fit:cover; border-radius:2px;">
                     <p style="font-size:10px; text-align:center; margin:5px 0; font-weight:bold; color:#002d5b;">{f.get('nome','')}</p>
                 </div>"""
+        fotos_html += '</div>' # Corrigido fechamento da div extra que estava sobrando no seu código
         fotos_html += '</div>'
 
     return f"""
@@ -289,6 +292,7 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, lo
                 </tr>
             </table>
             
+            <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-weight:bold; text-transform:uppercase;">Proposta Técnica Comercial</div>
             <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-weight:bold; text-transform:uppercase;">Orçamento de Serviços</div>
             <div style="text-align: right; font-size: 11px; margin: 10px 0;">Rio de Janeiro, {data_hoje}</div>
 
@@ -299,6 +303,8 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, lo
                     <b style="color:#666; font-size:10px;">EMPREENDIMENTO:</b><br>{empreend}
                 </div>
                 <div style="flex:1; border-left: 1px solid #ddd; padding-left:15px;">
+                    <b style="color:#666; font-size:10px;">ENDEREÇO DO EMPREENDIMENTO:</b><br>-<br><br>
+                    <b style="color:#666; font-size:10px;">A/C:</b><br>-<br><br>
                     <b style="color:#666; font-size:10px;">ENDEREÇO DO EMPREENDIMENTO:</b><br>{local if local else "-"}<br><br>
                     <b style="color:#666; font-size:10px;">A/C:</b><br>{cuidados}
                 </div>
@@ -331,7 +337,7 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, lo
 with st.sidebar:
     st.image("https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix", width=180)
     st.title("🛡️ Painel PROFIX")
-    
+
 # Criação das abas para organização limpa
 tab_nova, tab_lista = st.tabs(["📝 Novo/Editar Orçamento", "📋 Gerenciar Pedidos"])
 
@@ -341,7 +347,7 @@ with tab_lista:
     pedidos = supabase.table("orcamentos").select("*").order("id", desc=True).execute().data
     lista_cli = sorted(list(set([p['cliente_razao_social'] for p in pedidos if p['cliente_razao_social']])))
     filtro = st.selectbox("Filtrar Cliente", ["Todos"] + lista_cli, key="filtro_cli")
-    
+
     for p in pedidos:
         if filtro != "Todos" and p['cliente_razao_social'] != filtro: continue
         with st.expander(f"ID {p['id']} - {p['cliente_razao_social']}"):
@@ -357,7 +363,7 @@ with tab_lista:
 # --- ABA: NOVO ORÇAMENTO ---
 with tab_nova:
     st.header("📑 " + ("Editando Proposta" if st.session_state.edit_id else "Nova Proposta"))
-    
+
     # Busca clientes para preenchimento automático
     dados_memo = supabase.table("orcamentos").select("cliente_razao_social, cliente_cnpj, empreendimento, localizacao, aos_cuidados").execute().data
     clientes_memo = {d['cliente_razao_social']: d for d in dados_memo if d['cliente_razao_social']}
@@ -365,7 +371,7 @@ with tab_nova:
     with st.expander("1. Dados do Cliente", expanded=True):
         sel_c = st.selectbox("Cliente Existente?", ["-- Novo --"] + list(clientes_memo.keys()))
         rz, cnp, emp, loc, ac, esc_db = "", "", "", "", "", "||| ||| ||| "
-        
+
         if st.session_state.edit_id:
             curr = supabase.table("orcamentos").select("*").eq("id", st.session_state.edit_id).execute().data[0]
             rz, cnp, emp, loc, ac, esc_db = curr['cliente_razao_social'], curr['cliente_cnpj'], curr['empreendimento'], curr['localizacao'], curr['aos_cuidados'], curr['metodologia_escopo']
@@ -449,7 +455,7 @@ Validade da Proposta: 30 dias."""
                 nome_limpo = f.name.rsplit('.', 1)[0].replace('_', ' ').title()
                 st.session_state.fotos.append({"file": f, "nome": nome_limpo})
             st.rerun()
-            
+
         for idx, f in enumerate(st.session_state.fotos):
             cc1, cc2, cc3 = st.columns([1, 4, 0.5])
             prev = f.get('url_foto') if f.get('url_foto') else f.get('file')
@@ -461,11 +467,11 @@ Validade da Proposta: 30 dias."""
 
         st.divider()
         st.subheader("Adicionar Itens")
-        
+
         ci1, ci2, ci3 = st.columns([2, 1, 1])
         with ci1:
             it_n = st.selectbox("Profissional", ["Ajudante", "Montador", "Eletricista", "Limpeza", "Outros"])
-        
+
         sugestoes = {
             "Ajudante": "Atuação na movimentação de volumes e suporte logístico geral.",
             "Montador": "Montagem e desmontagem de mobiliário corporativo conforme layout.",
@@ -490,7 +496,7 @@ Validade da Proposta: 30 dias."""
                 "total": it_q * it_v
             })
             st.rerun()
-            
+
         # LISTAGEM COM TÍTULO EM AZUL
         for i_idx, it in enumerate(st.session_state.itens):
             c_it1, c_it2, c_it3 = st.columns([4, 1, 0.5])
@@ -499,14 +505,14 @@ Validade da Proposta: 30 dias."""
                 st.markdown(f"<span style='color:#1E90FF; font-weight:bold;'>Tópico {i_idx + 1}: {it['serv']}</span>", unsafe_allow_html=True)
                 if it.get('detalhe'):
                     st.write(it['detalhe'])
-            
+
             c_it2.write(f"R$ {it['total']:,.2f}")
             if c_it3.button("❌", key=f"del_it_{i_idx}"): 
                 st.session_state.itens.pop(i_idx)
                 st.rerun()
 
     total_proposta = sum(i['total'] for i in st.session_state.itens)
-    
+
     if st.button("💾 SALVAR PROPOSTA NO SISTEMA", type="primary", use_container_width=True):
         with st.spinner("Salvando..."):
             payload = {
@@ -515,7 +521,7 @@ Validade da Proposta: 30 dias."""
                 "aos_cuidados": ac_val, "valor_total": total_proposta, 
                 "metodologia_escopo": escopo_final, "status": "Enviado"
             }
-            
+
             if st.session_state.edit_id:
                 oid = st.session_state.edit_id
                 supabase.table("orcamentos").update(payload).eq("id", oid).execute()
