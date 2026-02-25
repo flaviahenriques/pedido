@@ -76,15 +76,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
         fotos_html += '<b class="secao-titulo">4. RELATÓRIO FOTOGRÁFICO</b>'
         fotos_html += '<div style="display: flex; flex-wrap: wrap; gap: 2%; margin-top: 15px;">'
         for f in lista_fotos:
-            img_src = ""
-            if f.get('url_foto') and str(f['url_foto']).startswith("http"):
-                img_src = transformar_url_em_base64(f['url_foto'])
-            elif 'file' in f:
-                try:
-                    b64 = base64.b64encode(f['file'].getvalue()).decode()
-                    img_src = f"data:image/png;base64,{b64}"
-                except: img_src = ""
-            
+            img_src = transformar_url_em_base64(f['url_foto']) if f.get('url_foto') else ""
             if img_src:
                 fotos_html += f"""
                 <div style="width: 48%; margin-bottom:20px; page-break-inside: avoid;">
@@ -93,15 +85,24 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                 </div>"""
         fotos_html += '</div>'
 
-    # Lista de Itens para Proposta COMPLETA com campo de detalhamento
+    # --- CORREÇÃO AQUI: ITENS COM TÓPICO AZUL E VALOR UNITÁRIO ---
     itens_html = ""
-    for i in lista_itens:
-        detalhe = i.get('detalhamento', '')
+    for idx, i in enumerate(lista_itens):
+        # Mapeia as chaves vindo da memória (it['serv']) ou do banco (i['servico'])
+        nome_serv = i.get('serv') or i.get('servico') or "Serviço"
+        detalhe = i.get('detalhe') or i.get('detalhamento') or ""
+        qtd = i.get('qtd') or i.get('quantidade') or 1
+        v_unit = i.get('v_unit') or i.get('valor_unitario') or 0
+        v_total = i.get('total') or i.get('valor_total') or 0
+
         itens_html += f"""
         <div style='margin-bottom:15px; border-bottom:1px solid #eee; padding:8px 0; page-break-inside: avoid;'>
-            <div style='display:flex; justify-content:space-between; font-size:14px;'>
-                <span><b>{i.get('servico','').upper()}</b> (x{i.get('quantidade',1)})</span>
-                <b>R$ {float(i.get('valor_total',0)):,.2f}</b>
+            <div style='display:flex; justify-content:space-between; align-items: baseline;'>
+                <span style="font-size:14px;">
+                    <b style="color:#1E90FF;">Tópico {idx + 1}: {nome_serv.upper()}</b> 
+                    <small style="color:#777; margin-left:10px;">(Qtd: {qtd} x R$ {float(v_unit):,.2f})</small>
+                </span>
+                <b style="font-size:14px; color:#333;">R$ {float(v_total):,.2f}</b>
             </div>
             {f'<div style="font-size:12px; color:#555; margin-top:4px; text-align:justify;">{detalhe}</div>' if detalhe else ''}
         </div>"""
