@@ -68,10 +68,10 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, li
     ano_atual = datetime.now().year
     num_exibicao = f"{ano_atual}-{str(id_orc).zfill(3)}" if id_orc else "PROVISÓRIO"
 
-    # ITENS SIMPLIFICADOS: Ajustado para as novas chaves serv, detalhe, v_unit
+    # --- LISTA DE ITENS CORRIGIDA PARA O SIMPLIFICADO ---
     itens_html = ""
     for idx, i in enumerate(lista_itens):
-        # Mapeamento de chaves para garantir que o nome apareça (memória ou banco)
+        # Garante que pegue o nome do profissional/serviço corretamente
         nome_serv = i.get('serv') or i.get('servico') or "Serviço"
         detalhe = i.get('detalhe') or i.get('detalhamento') or ""
         qtd = i.get('qtd') or i.get('quantidade') or 1
