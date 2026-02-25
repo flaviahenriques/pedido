@@ -549,17 +549,33 @@ if st.button("💾 SALVAR PROPOSTA NO SISTEMA", type="primary", use_container_wi
 
     # --- ÁREA DE VISUALIZAÇÃO (FORA DO BOTÃO SALVAR) ---
     st.divider()
-    formato = st.radio("Escolha o formato:", ["Proposta Técnica Completa", "Orçamento Simples (Direto)"], horizontal=True)
-
+    formato = st.radio("Escolha o formato de visualização:", ["Proposta Técnica Completa", "Orçamento Simples (Direto)"], horizontal=True)
+    
+    # CORREÇÃO: Adicionados loc_val e ac_val na chamada abaixo
     if formato == "Orçamento Simples (Direto)":
         html_final = montar_layout_simplificado_com_capa(
-            st.session_state.edit_id, razao, cnpj_val, emp_val, loc_val, ac_val, 
-            st.session_state.itens, st.session_state.fotos, total_proposta
+            st.session_state.edit_id, 
+            razao, 
+            cnpj_val, 
+            emp_val, 
+            loc_val,      # <-- Faltava este
+            ac_val,       # <-- Faltava este
+            st.session_state.itens, 
+            st.session_state.fotos, 
+            total_proposta
         )
     else:
         html_final = montar_layout_proposta(
-            st.session_state.edit_id, razao, cnpj_val, emp_val, loc_val, ac_val, 
-            escopo_final, st.session_state.itens, st.session_state.fotos, total_proposta
+            st.session_state.edit_id, 
+            razao, 
+            cnpj_val, 
+            emp_val, 
+            loc_val, 
+            ac_val, 
+            escopo_final, 
+            st.session_state.itens, 
+            st.session_state.fotos, 
+            total_proposta
         )
-
+    
     st.components.v1.html(html_final, height=1200, scrolling=True)
