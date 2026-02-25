@@ -467,18 +467,31 @@ Validade da Proposta: 30 dias."""
             c_it2.write(f"R$ {it['total']:,.2f}")
             if c_it3.button("❌", key=f"del_it_{i_idx}"): st.session_state.itens.pop(i_idx); st.rerun()
 
+# 1. Cálculo do valor total (Baseado nos itens da lista)
     total_proposta = sum(i['total'] for i in st.session_state.itens)
     
-    if st.button("💾 SALVAR PROPOSTA COMPLETA", type="primary", use_container_width=True):
+    # 2. Botão de Salvar no Banco de Dados
+    if st.button("💾 SALVAR PROPOSTA NO SISTEMA", type="primary", use_container_width=True):
         with st.spinner("Sincronizando com o banco e Storage..."):
-            payload = {"cliente_razao_social": razao, "cliente_cnpj": cnpj_val, "empreendimento": emp_val, "localizacao": loc_val, "aos_cuidados": ac_val, "valor_total": total_proposta, "metodologia_escopo": escopo_final, "status": "Enviado"}
+            payload = {
+                "cliente_razao_social": razao, 
+                "cliente_cnpj": cnpj_val, 
+                "empreendimento": emp_val, 
+                "localizacao": loc_val, 
+                "aos_cuidados": ac_val, 
+                "valor_total": total_proposta, 
+                "metodologia_escopo": escopo_final, 
+                "status": "Enviado"
+            }
+            
             if st.session_state.edit_id:
                 oid = st.session_state.edit_id
                 supabase.table("orcamentos").update(payload).eq("id", oid).execute()
                 supabase.table("itens_orcamento").delete().eq("orcamento_id", oid).execute()
                 supabase.table("fotos_relatorio").delete().eq("orcamento_id", oid).execute()
             else:
-                res = supabase.table("orcamentos").insert(payload).execute(); oid = res.data[0]['id']
+                res = supabase.table("orcamentos").insert(payload).execute()
+                oid = res.data[0]['id']
                 st.session_state.edit_id = oid
 
             for i in st.session_state.itens: 
@@ -492,26 +505,27 @@ Validade da Proposta: 30 dias."""
             st.success(f"✅ Proposta {oid} Salva!")
             st.rerun()
 
+    # 3. Seletor de Modelo de Impressão (Visualização)
     st.divider()
-    html_gerado = montar_layout_proposta(st.session_state.edit_id, razao, cnpj_val, emp_val, loc_val, ac_val, escopo_final, st.session_state.itens, st.session_state.fotos, total_proposta)
-    st.components.v1.html(html_gerado, height=1500, scrolling=True)
-st.subheader("⚙️ Configuração da Impressão")
+    st.subheader("⚙️ Configuração da Impressão")
 
-formato = st.radio(
-    "Escolha o formato do documento:",
-    ["Proposta Técnica Completa", "Orçamento Simples (Direto)"],
-    horizontal=True
-)
-
-if formato == "Orçamento Simples (Direto)":
-    html_final = montar_layout_simplificado_com_capa(
-        st.session_state.edit_id, razao, cnpj_val, emp_val, 
-        st.session_state.itens, st.session_state.fotos, total_proposta
-    )
-else:
-    html_final = montar_layout_proposta(
-        st.session_state.edit_id, razao, cnpj_val, emp_val, loc_val, 
-        ac_val, escopo_final, st.session_state.itens, st.session_state.fotos, total_proposta
+    formato = st.radio(
+        "Escolha o formato do documento para gerar o PDF:",
+        ["Proposta Técnica Completa", "Orçamento Simples (Direto)"],
+        horizontal=True
     )
 
-st.components.v1.html(html_final, height=1200, scrolling=True)
+    # Lógica que decide qual função de HTML chamar
+    if formato == "Orçamento Simples (Direto)":
+        html_final = montar_layout_simplificado_com_capa(
+            st.session_state.edit_id, razao, cnpj_val, emp_val, 
+            st.session_state.itens, st.session_state.fotos, total_proposta
+        )
+    else:
+        html_final = montar_layout_proposta(
+            st.session_state.edit_id, razao, cnpj_val, emp_val, loc_val, 
+            ac_val, escopo_final, st.session_state.itens, st.session_state.fotos, total_proposta
+        )
+
+    # 4. Renderização Final do Documento
+    st.components.v1.html(html_final, height=1200, scrolling=True)
