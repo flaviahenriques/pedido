@@ -151,9 +151,9 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                 </tr>
             </table>
             <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-weight:bold;">PROPOSTA TÉCNICA COMERCIAL</div>
-            <div style="border:1px solid #ddd; padding:15px; margin: 15px 0; font-size:13px; display:flex; background:#f9f9f9 !important;">
-                <div style="flex:1;"><b>CLIENTE:</b> {r_social}<br><b>CNPJ:</b> {cnpj_val}<br><b>EMPREENDIMENTO:</b> {empreend}</div>
-                <div style="flex:1; border-left: 1px solid #ddd; padding-left:15px;"><b>REF:</b> {num_exibicao}<br><b>A/C:</b> {cuidados}<br><b>LOCAL:</b> {local if local else "-"}</div>
+            <div style="border:1px solid #ddd; border-left: 8px solid #002d5b !important; padding:15px; margin: 15px 0; font-size:13px; display:flex; background:#f9f9f9 !important;">
+                <div style="flex:1;"><b>RAZÃO SOCIAL:</b> {r_social}<br><b>CNPJ:</b> {cnpj_val}<br><b>EMPREENDIMENTO:</b> {empreend}</div>
+                <div style="flex:1; border-left: 1px solid #ddd; padding-left:15px;"><b>ENDEREÇO DO EMPREENDIMENTO:</b> {local if local else "-"}<br><b>A/C:</b> {cuidados}</div>
             </div>
             <b class="secao-titulo">1. METODOLOGIA E ESCOPO TÉCNICO</b><div class="texto">{s1}</div>
             <b class="secao-titulo">2. MATERIAIS INCLUSOS</b><div class="texto">{s2}</div>
@@ -164,7 +164,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                 <div style="margin: 15px 0;">{itens_html}</div>
                 <div style="display: flex; justify-content: flex-end;">
                     <div style="background:#f1f4f9 !important; padding:25px; border-left:8px solid #002d5b !important; text-align:right; width: 300px;">
-                        <small style="color:#666;">VALOR TOTAL</small><br>
+                        <small style="color:#666;">TOTAL DO INVESTIMENTO</small><br>
                         <b style="font-size:28px; color:#002d5b;">R$ {valor_total:,.2f}</b>
                     </div>
                 </div>
@@ -180,18 +180,24 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, li
     ano_atual = datetime.now().year
     num_exibicao = f"{ano_atual}-{str(id_orc).zfill(3)}" if id_orc else "PROVISÓRIO"
 
+    # Estilo de itens conforme imagem (descrição à esquerda, valor à direita)
     itens_html = "".join([
-        f"<tr>"
-        f"<td style='padding:12px; border-bottom:1px solid #eee;'><b>{i.get('serv','').upper()}</b></td>"
-        f"<td style='padding:12px; border-bottom:1px solid #eee; text-align:center;'>{i.get('qtd',1)}</td>"
-        f"<td style='padding:12px; border-bottom:1px solid #eee; text-align:right;'><b>R$ {float(i.get('total',0)):,.2f}</b></td>"
-        f"</tr>" 
-        for i in lista_itens
+        f"<div style='margin-bottom: 15px; page-break-inside: avoid;'>"
+        f"<div style='display: flex; justify-content: space-between; align-items: baseline;'>"
+        f"<b style='color: #002d5b; font-size: 15px;'>{idx+1}. {i.get('serv','').upper()}</b>"
+        f"<span style='font-size: 13px; font-weight: bold;'>Qtd: {i.get('qtd',1)}</span>"
+        f"</div>"
+        f"<div style='display: flex; justify-content: space-between; margin-top: 5px; border-bottom: 1px solid #f0f0f0; padding-bottom: 8px;'>"
+        f"<div style='font-size: 12px; color: #555;'>Serviço / Item Avulso | Local: {empreend}</div>"
+        f"<b style='font-size: 15px; color: #333;'>R$ {float(i.get('total',0)):,.2f}</b>"
+        f"</div>"
+        f"</div>"
+        for idx, i in enumerate(lista_itens)
     ])
 
     fotos_html = ""
     if lista_fotos:
-        fotos_html = '<div style="margin-top:40px;"><b style="color:#002d5b; border-bottom:2px solid #002d5b; display:block; padding-bottom:5px;">REGISTRO FOTOGRÁFICO</b>'
+        fotos_html = '<b style="color:#002d5b; border-bottom:2px solid #002d5b; display:block; margin-top:30px; padding-bottom:5px; font-size:14px; text-transform:uppercase; font-weight:bold;">REGISTRO FOTOGRÁFICO</b>'
         fotos_html += '<div style="display:flex; flex-wrap:wrap; gap:15px; margin-top:15px;">'
         for f in lista_fotos:
             img_src = transformar_url_em_base64(f['url_foto']) if f.get('url_foto') else ""
@@ -247,7 +253,7 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, li
         <div class="conteudo-pagina">
             <table style="width:100%; margin-bottom: 20px;">
                 <tr>
-                    <td><img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="150"></td>
+                    <td><img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="180"></td>
                     <td style="text-align:right; font-size:10px; color: #666;">
                         <b style="color:#002d5b;">PROFIX GESTÃO DE FACILITIES</b><br>
                         CNPJ: 52.620.102/0001-03<br>
@@ -256,30 +262,38 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, li
                     </td>
                 </tr>
             </table>
-            <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-weight:bold;">DEMONSTRATIVO DE CUSTOS</div>
-            <table style="width:100%; border-collapse:collapse; margin-top:20px;">
-                <thead>
-                    <tr style="background:#002d5b !important; color:white !important;">
-                        <th style="padding:12px; text-align:left;">DESCRIÇÃO DOS SERVIÇOS / ITENS</th>
-                        <th style="padding:12px;">QTD</th>
-                        <th style="padding:12px; text-align:right;">TOTAL</th>
-                    </tr>
-                </thead>
-                <tbody>{itens_html}</tbody>
-            </table>
-            <div style="margin-top:30px; display:flex; justify-content:flex-end;">
+            
+            <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-weight:bold; text-transform:uppercase;">Proposta Técnica Comercial</div>
+            <div style="text-align: right; font-size: 11px; margin: 10px 0;">Rio de Janeiro, {data_hoje}</div>
+
+            <div style="border:1px solid #ddd; border-left: 8px solid #002d5b !important; padding:15px; margin: 15px 0; font-size:12px; display:flex; background:#f9f9f9 !important; line-height: 1.5;">
+                <div style="flex:1.2;">
+                    <b style="color:#666; font-size:10px;">RAZÃO SOCIAL:</b><br><b>{r_social}</b><br><br>
+                    <b style="color:#666; font-size:10px;">CNPJ:</b><br>{cnpj_val}<br><br>
+                    <b style="color:#666; font-size:10px;">EMPREENDIMENTO:</b><br>{empreend}
+                </div>
+                <div style="flex:1; border-left: 1px solid #ddd; padding-left:15px;">
+                    <b style="color:#666; font-size:10px;">ENDEREÇO DO EMPREENDIMENTO:</b><br>-<br><br>
+                    <b style="color:#666; font-size:10px;">A/C:</b><br>Roberta
+                </div>
+            </div>
+
+            <div style="margin-top: 25px;">
+                {itens_html}
+            </div>
+
+            <div style="margin-top:30px; display:flex; justify-content:space-between; align-items: flex-end; page-break-inside: avoid;">
+                <div style="font-size:11px; color:#555;">
+                    <b style="color:#333;">CONDIÇÕES GERAIS:</b><br>
+                    • Validade da Proposta: 10 dias úteis.<br>
+                    • Pagamento conforme contrato.
+                </div>
                 <div style="background:#f1f4f9 !important; padding:20px; border-left:8px solid #002d5b !important; text-align:right; min-width:250px;">
-                    <span style="color:#666; font-size:12px;">VALOR TOTAL DO INVESTIMENTO</span><br>
+                    <span style="color:#666; font-size:12px;">TOTAL DO INVESTIMENTO</span><br>
                     <b style="font-size:26px; color:#002d5b;">R$ {valor_total:,.2f}</b>
                 </div>
             </div>
             {fotos_html}
-            <div style="margin-top:50px; font-size:11px; color:#999; border-top:1px solid #eee; padding-top:10px;">
-                <b>NOTAS GERAIS:</b><br>
-                1. Validade desta proposta: 10 dias úteis.<br>
-                2. Impostos inclusos conforme legislação vigente.<br>
-                3. O início dos serviços está condicionado à aprovação formal deste documento.
-            </div>
         </div>
     </body>
     </html>
