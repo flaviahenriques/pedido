@@ -63,6 +63,10 @@ def upload_imagem_supabase(foto_obj):
 # 2) DESIGN DA PROPOSTA (LAYOUTS HTML COMPLETOS - REVISADO)
 # =========================================================
 
+# =========================================================
+# 2) DESIGN DA PROPOSTA (LAYOUTS HTML COMPLETOS - REVISADO)
+# =========================================================
+
 def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados, escopo, lista_itens, lista_fotos, valor_total):
     data_hoje = datetime.now().strftime("%d/%m/%Y")
     ano_atual = datetime.now().year
@@ -71,33 +75,29 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
     s1, s2, s3, s4 = partes[0], partes[1], partes[2], partes[3]
     num_exibicao = f"{ano_atual}-{str(id_orc).zfill(3)}" if id_orc else "PROVISÓRIO"
 
-    # Renderização de Itens (Estilo Foto: Título Azul + Qtd + Descrição)
     itens_html = ""
     for idx, i in enumerate(lista_itens):
         itens_html += f"""
-        <div style="margin-top: 20px; page-break-inside: avoid;">
+        <div style="margin-top: 15px; page-break-inside: avoid;">
             <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                <b style="color: #002d5b; font-size: 16px;">{idx+1}. {i.get('serv','').upper()}</b>
-                <span style="font-size: 14px; font-weight: bold;">Qtd: {i.get('qtd',1)}</span>
+                <b style="color: #002d5b; font-size: 15px;">{idx+1}. {i.get('serv','').upper()}</b>
+                <span style="font-size: 13px; font-weight: bold;">Qtd: {i.get('qtd',1)}</span>
             </div>
-            <div style="font-size: 12px; color: #777; margin-top: 3px;">Serviço Técnico Especializado | Local: {empreend}</div>
             <div style="display: flex; justify-content: space-between; margin-top: 5px; border-bottom: 1px solid #f0f0f0; padding-bottom: 8px;">
-                <div style="font-size: 13px; color: #444; width: 70%;">Atuação conforme escopo técnico definido, garantindo a manutenção e preservação do patrimônio.</div>
-                <b style="font-size: 15px; color: #002d5b;">R$ {float(i.get('total',0)):,.2f}</b>
+                <div style="font-size: 12px; color: #555; width: 75%;">Execução técnica conforme escopo detalhado.</div>
+                <b style="font-size: 14px; color: #002d5b;">R$ {float(i.get('total',0)):,.2f}</b>
             </div>
-        </div>
-        """
+        </div>"""
 
     fotos_html = ""
     if lista_fotos:
-        fotos_html += '<b class="secao-titulo">4. RELATÓRIO FOTOGRÁFICO</b>'
-        fotos_html += '<div style="display: flex; flex-wrap: wrap; gap: 2%; margin-top: 15px;">'
+        fotos_html = '<b class="secao-titulo">4. RELATÓRIO FOTOGRÁFICO</b><div style="display: flex; flex-wrap: wrap; gap: 2%; margin-top: 15px;">'
         for f in lista_fotos:
             img_src = transformar_url_em_base64(f.get('url_foto')) if f.get('url_foto') else ""
             if img_src:
                 fotos_html += f"""
-                <div style="width: 48%; margin-bottom:20px; page-break-inside: avoid;">
-                    <img src="{img_src}" style="width:100%; height:250px; object-fit: cover; border:1px solid #ddd; border-radius:5px;">
+                <div style="width: 48%; margin-bottom:15px; page-break-inside: avoid;">
+                    <img src="{img_src}" style="width:100%; height:220px; object-fit: cover; border:1px solid #ddd; border-radius:5px;">
                     <p style="text-align:center; font-size:11px; font-weight:bold; color:#002d5b; margin-top:5px;">{f.get('nome','Item')}</p>
                 </div>"""
         fotos_html += '</div>'
@@ -106,101 +106,56 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
     <html>
     <head>
     <style>
-        /* Força a impressão de cores de fundo (Barra Azul e Quadros) */
         * {{ -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
-        
-        body {{ font-family: 'Segoe UI', Arial, sans-serif; color: #333; margin: 0; padding: 40px; }}
-        
-        @media print {{
-            .no-print {{ display: none !important; }}
-            body {{ padding: 0; }}
-            @page {{ size: A4; margin: 1.2cm; }}
-        }}
-
-        .header-table {{ width: 100%; margin-bottom: 10px; }}
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; color: #333; padding: 30px; }}
+        @media print {{ .no-print {{ display: none !important; }} body {{ padding: 0; }} }}
         .header-info {{ text-align: right; font-size: 10px; color: #333; line-height: 1.4; }}
-        
-        .barra-titulo {{ 
-            background: #002d5b !important; color: white !important; 
-            text-align: center; padding: 12px; font-weight: bold; 
-            font-size: 18px; margin: 10px 0; border-radius: 2px; text-transform: uppercase;
-        }}
-        
-        .quadro-dados {{ 
-            display: flex; border: 1px solid #ddd; background: #f8f8f8 !important; 
-            margin-bottom: 20px; font-size: 12px;
-        }}
+        .barra-azul {{ background: #002d5b !important; color: white !important; text-align: center; padding: 12px; font-weight: bold; margin: 10px 0; text-transform: uppercase; }}
+        .quadro-dados {{ display: flex; border: 1px solid #ddd; background: #f8f8f8 !important; margin-bottom: 20px; font-size: 12px; }}
         .col-dados {{ flex: 1; padding: 12px; border-right: 1px solid #ddd; }}
-        .label {{ font-weight: bold; color: #666; display: block; margin-bottom: 2px; text-transform: uppercase; font-size: 9px; }}
-        .valor {{ margin-bottom: 8px; display: block; color: #000; font-weight: 600; }}
-
-        .secao-titulo {{ color:#002d5b; font-size:14px; text-transform: uppercase; margin-top: 25px; border-bottom: 2px solid #002d5b; display: block; font-weight: bold; padding-bottom: 5px; }}
-        .texto {{ text-align: justify; font-size: 13px; white-space: pre-wrap; margin: 10px 0; line-height: 1.6; color: #444; }}
-
-        .total-box {{
-            background: #f1f4f9 !important; border-left: 10px solid #002d5b !important;
-            padding: 25px; text-align: right; margin-top: 30px;
-            float: right; width: 300px; page-break-inside: avoid;
-        }}
+        .label {{ font-weight: bold; color: #666; display: block; font-size: 9px; text-transform: uppercase; }}
+        .valor {{ margin-bottom: 8px; display: block; font-weight: 600; }}
+        .secao-titulo {{ color:#002d5b; font-size:13px; text-transform: uppercase; margin-top: 20px; border-bottom: 2px solid #002d5b; display: block; font-weight: bold; padding-bottom: 3px; }}
+        .total-box {{ background: #f1f4f9 !important; border-left: 10px solid #002d5b !important; padding: 20px; text-align: right; float: right; width: 250px; }}
     </style>
     </head>
     <body>
-        <button class="no-print" onclick="window.print()" style="background:#002d5b; color:white; padding:15px 30px; border:none; border-radius:5px; cursor:pointer; margin-bottom:20px; font-weight:bold;">🖨️ IMPRIMIR PROPOSTA</button>
-
-        <table class="header-table">
+        <button class="no-print" onclick="window.print()" style="background:#002d5b; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; margin-bottom:20px;">🖨️ IMPRIMIR</button>
+        <table width="100%">
             <tr>
-                <td><img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="180"></td>
-                <td class="header-info">
-                    <b>PROFIX GESTÃO DE FACILITIES</b><br>
-                    CNPJ: 52.620.102/0001-03<br>
-                    Tel: (21) 3609-1314<br>
-                    Av. Marechal Câmara, 160, Sala 1107 - Centro, Rio de Janeiro - RJ
-                </td>
+                <td><img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="160"></td>
+                <td class="header-info"><b>PROFIX GESTÃO DE FACILITIES</b><br>CNPJ: 52.620.102/0001-03<br>Tel: (21) 3609-1314</td>
             </tr>
         </table>
-
-        <div class="barra-titulo">PROPOSTA TÉCNICA COMERCIAL</div>
-        <div style="text-align: right; font-size: 11px; margin-bottom: 10px; color: #666;">Rio de Janeiro, {data_hoje} | REF: {num_exibicao}</div>
-
+        <div class="barra-azul">PROPOSTA TÉCNICA COMERCIAL</div>
+        <div style="text-align: right; font-size: 10px; margin-bottom: 10px;">Rio de Janeiro, {data_hoje} | REF: {num_exibicao}</div>
         <div class="quadro-dados">
             <div class="col-dados">
-                <span class="label">Razão Social:</span>
-                <span class="valor">{r_social}</span>
-                <span class="label">CNPJ:</span>
-                <span class="valor">{cnpj_val}</span>
-                <span class="label">Empreendimento:</span>
-                <span class="valor">{empreend}</span>
+                <span class="label">Razão Social:</span><span class="valor">{r_social}</span>
+                <span class="label">CNPJ:</span><span class="valor">{cnpj_val}</span>
+                <span class="label">Empreendimento:</span><span class="valor">{empreend}</span>
             </div>
             <div class="col-dados" style="border-right: none;">
-                <span class="label">Localização:</span>
-                <span class="valor">{local if local else "—"}</span>
-                <span class="label">A/C:</span>
-                <span class="valor">{cuidados if cuidados else "À Administração"}</span>
+                <span class="label">Localização:</span><span class="valor">{local if local else "—"}</span>
+                <span class="label">A/C:</span><span class="valor">{cuidados}</span>
             </div>
         </div>
-
-        <b class="secao-titulo">1. METODOLOGIA E ESCOPO TÉCNICO</b>
-        <div class="texto">{s1}</div>
-
-        <b class="secao-titulo">2. DETALHAMENTO DE INVESTIMENTO</b>
-        {itens_html}
-
+        <b class="secao-titulo">1. METODOLOGIA E ESCOPO</b><div style="font-size:12px; white-space:pre-wrap; margin:10px 0;">{s1}</div>
+        <b class="secao-titulo">2. INVESTIMENTO DETALHADO</b>{itens_html}
         {fotos_html}
-
-        <div style="page-break-inside: avoid; margin-top: 30px;">
-            <div style="float: left; width: 50%;">
-                <b style="font-size: 13px; color: #002d5b;">CONDIÇÕES GERAIS:</b>
-                <div style="font-size: 11px; color: #666; margin-top: 10px;">{s4}</div>
-            </div>
+        <div style="margin-top:30px; overflow: hidden; page-break-inside: avoid;">
             <div class="total-box">
-                <span style="font-size: 12px; color: #666;">VALOR TOTAL DA PROPOSTA</span><br>
-                <span style="font-size: 28px; color: #002d5b; font-weight: 900;">R$ {valor_total:,.2f}</span>
+                <span style="font-size: 11px; color: #666;">TOTAL GERAL</span><br>
+                <b style="font-size: 24px; color: #002d5b;">R$ {valor_total:,.2f}</b>
             </div>
         </div>
-        <div style="clear: both;"></div>
     </body>
     </html>
     """
+
+def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, lista_itens, lista_fotos, valor_total):
+    # Reutiliza a mesma lógica visual para manter o padrão Profix
+    return montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, "", "À Administração", "Orçamento Simplificado", lista_itens, lista_fotos, valor_total)
 
 # =========================================================
 # 3) INTERFACE PRINCIPAL
