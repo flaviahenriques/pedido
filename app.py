@@ -433,6 +433,7 @@ Condição de Pagamento: O faturamento será realizado mensalmente, com vencimen
 Serviços Extraordinários: Demandas que excedam os limites de metragem estipulados no item 1, ou intervenções estruturais de grande porte, serão objeto de orçamento complementar para aprovação prévia.
 
 Validade da Proposta: 30 dias."""
+]
 while len(p_esc) < 4: p_esc.append("")
         t1 = st.text_area("1. Metodologia", value=p_esc[0], height=350)
         t2 = st.text_area("2. Materiais", value=p_esc[1], height=250)
