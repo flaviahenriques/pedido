@@ -198,22 +198,27 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, li
     ano_atual = datetime.now().year
     num_exibicao = f"{ano_atual}-{str(id_orc).zfill(3)}" if id_orc else "PROVISÓRIO"
 
-    # ITENS SIMPLIFICADOS: Formatação exata com Detalhamento abaixo do título
+    # ITENS SIMPLIFICADOS: Mapeamento corrigido para aceitar 'serv' ou 'servico'
     itens_html = ""
     for idx, i in enumerate(lista_itens):
-        detalhe = i.get('detalhamento', '')
+        # MAPEAMENTO INTELIGENTE: busca os nomes corretos independente da origem (banco ou memória)
+        nome_serv = i.get('serv') or i.get('servico') or "Serviço"
+        detalhe = i.get('detalhe') or i.get('detalhamento') or ""
+        qtd = i.get('qtd') or i.get('quantidade') or 1
+        v_total = i.get('total') or i.get('valor_total') or 0
+
         itens_html += f"""
         <div style='margin-bottom: 20px; page-break-inside: avoid;'>
             <div style='display: flex; justify-content: space-between; align-items: baseline;'>
-                <b style='color: #002d5b; font-size: 15px;'>{idx+1}. {i.get('servico','').upper()}</b>
-                <span style='font-size: 13px; font-weight: bold;'>Qtd: {i.get('quantidade',1)}</span>
+                <b style='color: #002d5b; font-size: 15px;'>{idx+1}. {nome_serv.upper()}</b>
+                <span style='font-size: 13px; font-weight: bold;'>Qtd: {qtd}</span>
             </div>
             <div style='font-size: 11px; color: #999; margin: 3px 0;'>Serviço Avulso | Local: {empreend}</div>
             <div style='display: flex; justify-content: space-between; align-items: flex-start;'>
                 <div style='font-size: 12px; color: #555; flex: 1; padding-right: 20px; text-align: justify; line-height: 1.4;'>
                     {detalhe}
                 </div>
-                <b style='font-size: 15px; color: #333; white-space: nowrap;'>R$ {float(i.get('valor_total',0)):,.2f}</b>
+                <b style='font-size: 15px; color: #333; white-space: nowrap;'>R$ {float(v_total):,.2f}</b>
             </div>
         </div>"""
 
@@ -229,7 +234,7 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, li
                     <img src="{img_src}" style="width:100%; height:140px; object-fit:cover; border-radius:2px;">
                     <p style="font-size:10px; text-align:center; margin:5px 0; font-weight:bold; color:#002d5b;">{f.get('nome','')}</p>
                 </div>"""
-        fotos_html += '</div></div>'
+        fotos_html += '</div>' # Corrigido fechamento da div extra que estava sobrando no seu código
 
     return f"""
     <html>
@@ -296,7 +301,7 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, li
                 </div>
                 <div style="flex:1; border-left: 1px solid #ddd; padding-left:15px;">
                     <b style="color:#666; font-size:10px;">ENDEREÇO DO EMPREENDIMENTO:</b><br>-<br><br>
-                    <b style="color:#666; font-size:10px;">A/C:</b><br>Roberta
+                    <b style="color:#666; font-size:10px;">A/C:</b><br>Equipe Administrativa
                 </div>
             </div>
 
