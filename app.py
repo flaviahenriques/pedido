@@ -509,18 +509,27 @@ Validade da Proposta: 30 dias."""
 
     total_proposta = sum(i['total'] for i in st.session_state.itens)
 
-if st.button("💾 SALVAR PROPOSTA NO SISTEMA", type="primary", use_container_width=True):
+# Cálculo do total (alinhado com o conteúdo da tab_nova)
+    total_proposta = sum(i['total'] for i in st.session_state.itens)
+
+    if st.button("💾 SALVAR PROPOSTA NO SISTEMA", type="primary", use_container_width=True):
         with st.spinner("Salvando..."):
+            # Prepare o payload para a tabela 'orcamentos'
             payload = {
-                "cliente_razao_social": razao, "cliente_cnpj": cnpj_val, 
-                "empreendimento": emp_val, "localizacao": loc_val, 
-                "aos_cuidados": ac_val, "valor_total": total_proposta, 
-                "metodologia_escopo": escopo_final, "status": "Enviado"
+                "cliente_razao_social": razao, 
+                "cliente_cnpj": cnpj_val, 
+                "empreendimento": emp_val, 
+                "localizacao": loc_val, 
+                "aos_cuidados": ac_val, 
+                "valor_total": total_proposta, 
+                "metodologia_escopo": escopo_final, 
+                "status": "Enviado"
             }
 
             if st.session_state.edit_id:
                 oid = st.session_state.edit_id
                 supabase.table("orcamentos").update(payload).eq("id", oid).execute()
+                # Limpa registros antigos para sobrescrever
                 supabase.table("itens_orcamento").delete().eq("orcamento_id", oid).execute()
                 supabase.table("fotos_relatorio").delete().eq("orcamento_id", oid).execute()
             else:
@@ -528,7 +537,7 @@ if st.button("💾 SALVAR PROPOSTA NO SISTEMA", type="primary", use_container_wi
                 oid = res.data[0]['id']
                 st.session_state.edit_id = oid
 
-            # Salva os itens novamente
+            # Salva os itens (Verifique se os nomes das colunas batem com seu banco!)
             for i in st.session_state.itens: 
                 supabase.table("itens_orcamento").insert({
                     "orcamento_id": oid, 
@@ -539,10 +548,10 @@ if st.button("💾 SALVAR PROPOSTA NO SISTEMA", type="primary", use_container_wi
                     "valor_total": i['total']
                 }).execute()
 
-            # Sobe as fotos e salva referências
+            # Salva as fotos
             for f in st.session_state.fotos: 
                 url_final = upload_imagem_supabase(f)
-                if url_final:
+                if url_final: 
                     supabase.table("fotos_relatorio").insert({
                         "orcamento_id": oid, 
                         "nome_item": f['nome'], 
@@ -550,37 +559,21 @@ if st.button("💾 SALVAR PROPOSTA NO SISTEMA", type="primary", use_container_wi
                     }).execute()
             
             st.success("✅ Orçamento salvo com sucesso!")
-            st.rerun()
 
-    # --- ÁREA DE VISUALIZAÇÃO (FORA DO BOTÃO SALVAR) ---
     st.divider()
+    
     formato = st.radio("Escolha o formato de visualização:", ["Proposta Técnica Completa", "Orçamento Simples (Direto)"], horizontal=True)
     
-    # CORREÇÃO: Adicionados loc_val e ac_val na chamada abaixo
+    # Renderização do HTML final
     if formato == "Orçamento Simples (Direto)":
         html_final = montar_layout_simplificado_com_capa(
-            st.session_state.edit_id, 
-            razao, 
-            cnpj_val, 
-            emp_val, 
-            loc_val,      # <-- Faltava este
-            ac_val,       # <-- Faltava este
-            st.session_state.itens, 
-            st.session_state.fotos, 
-            total_proposta
+            st.session_state.edit_id, razao, cnpj_val, emp_val, loc_val, ac_val, 
+            st.session_state.itens, st.session_state.fotos, total_proposta
         )
     else:
         html_final = montar_layout_proposta(
-            st.session_state.edit_id, 
-            razao, 
-            cnpj_val, 
-            emp_val, 
-            loc_val, 
-            ac_val, 
-            escopo_final, 
-            st.session_state.itens, 
-            st.session_state.fotos, 
-            total_proposta
+            st.session_state.edit_id, razao, cnpj_val, emp_val, loc_val, ac_val, 
+            escopo_final, st.session_state.itens, st.session_state.fotos, total_proposta
         )
     
     st.components.v1.html(html_final, height=1200, scrolling=True)
