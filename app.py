@@ -434,13 +434,17 @@ Serviços Extraordinários: Demandas que excedam os limites de metragem estipula
 
 Validade da Proposta: 30 dias."""
 ]
-while len(p_esc) < 4: p_esc.append("")
+# Este trecho deve estar dentro do "with st.expander('2. Escopo Técnico...')":
+        while len(p_esc) < 4: 
+            p_esc.append("")
+            
         t1 = st.text_area("1. Metodologia", value=p_esc[0], height=350)
         t2 = st.text_area("2. Materiais", value=p_esc[1], height=250)
         t3 = st.text_area("3. Atendimento", value=p_esc[2], height=200)
         t4 = st.text_area("Condições Comerciais", value=p_esc[3], height=150)
         escopo_final = f"{t1}|||{t2}|||{t3}|||{t4}"
 
+    # Agora o expander 3 alinhado com o expander 2:
     with st.expander("3. Fotos e Valores", expanded=True):
         up_f = st.file_uploader("Subir Fotos", accept_multiple_files=True)
         if up_f and st.button("🪄 Processar Fotos"):
@@ -452,7 +456,8 @@ while len(p_esc) < 4: p_esc.append("")
         for idx, f in enumerate(st.session_state.fotos):
             cc1, cc2, cc3 = st.columns([1, 4, 0.5])
             prev = f.get('url_foto') if f.get('url_foto') else f.get('file')
-            if prev: cc1.image(prev, width=100)
+            if prev: 
+                cc1.image(prev, width=100)
             f['nome'] = cc2.text_input(f"Legenda {idx}", f['nome'], key=f"f_txt_{idx}")
             if cc3.button("🗑️", key=f"del_f_{idx}"): 
                 st.session_state.fotos.pop(idx)
