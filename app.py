@@ -193,7 +193,7 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
     </body>
     </html>
     """
-def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, lista_itens, lista_fotos, valor_total):
+def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, local, cuidados, lista_itens, lista_fotos, valor_total):
     data_hoje = datetime.now().strftime("%d/%m/%Y")
     ano_atual = datetime.now().year
     num_exibicao = f"{ano_atual}-{str(id_orc).zfill(3)}" if id_orc else "PROVISÓRIO"
@@ -201,7 +201,6 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, li
     # ITENS SIMPLIFICADOS: Mapeamento corrigido para aceitar 'serv' ou 'servico'
     itens_html = ""
     for idx, i in enumerate(lista_itens):
-        # MAPEAMENTO INTELIGENTE: busca os nomes corretos independente da origem (banco ou memória)
         nome_serv = i.get('serv') or i.get('servico') or "Serviço"
         detalhe = i.get('detalhe') or i.get('detalhamento') or ""
         qtd = i.get('qtd') or i.get('quantidade') or 1
@@ -234,7 +233,7 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, li
                     <img src="{img_src}" style="width:100%; height:140px; object-fit:cover; border-radius:2px;">
                     <p style="font-size:10px; text-align:center; margin:5px 0; font-weight:bold; color:#002d5b;">{f.get('nome','')}</p>
                 </div>"""
-        fotos_html += '</div>' # Corrigido fechamento da div extra que estava sobrando no seu código
+        fotos_html += '</div>'
 
     return f"""
     <html>
@@ -290,7 +289,7 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, li
                 </tr>
             </table>
             
-            <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-weight:bold; text-transform:uppercase;">Proposta Técnica Comercial</div>
+            <div style="background:#002d5b !important; color:white !important; text-align:center; padding:10px; font-weight:bold; text-transform:uppercase;">Orçamento de Serviços</div>
             <div style="text-align: right; font-size: 11px; margin: 10px 0;">Rio de Janeiro, {data_hoje}</div>
 
             <div style="border:1px solid #ddd; border-left: 8px solid #002d5b !important; padding:15px; margin: 15px 0; font-size:12px; display:flex; background:#f9f9f9 !important; line-height: 1.5;">
@@ -300,8 +299,8 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, li
                     <b style="color:#666; font-size:10px;">EMPREENDIMENTO:</b><br>{empreend}
                 </div>
                 <div style="flex:1; border-left: 1px solid #ddd; padding-left:15px;">
-                    <b style="color:#666; font-size:10px;">ENDEREÇO DO EMPREENDIMENTO:</b><br>-<br><br>
-                    <b style="color:#666; font-size:10px;">A/C:</b><br>-<br><br>
+                    <b style="color:#666; font-size:10px;">ENDEREÇO DO EMPREENDIMENTO:</b><br>{local if local else "-"}<br><br>
+                    <b style="color:#666; font-size:10px;">A/C:</b><br>{cuidados}
                 </div>
             </div>
 
