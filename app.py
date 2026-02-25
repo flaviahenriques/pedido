@@ -433,9 +433,7 @@ Condição de Pagamento: O faturamento será realizado mensalmente, com vencimen
 Serviços Extraordinários: Demandas que excedam os limites de metragem estipulados no item 1, ou intervenções estruturais de grande porte, serão objeto de orçamento complementar para aprovação prévia.
 
 Validade da Proposta: 30 dias."""
-            ]
-
-        while len(p_esc) < 4: p_esc.append("")
+while len(p_esc) < 4: p_esc.append("")
         t1 = st.text_area("1. Metodologia", value=p_esc[0], height=350)
         t2 = st.text_area("2. Materiais", value=p_esc[1], height=250)
         t3 = st.text_area("3. Atendimento", value=p_esc[2], height=200)
@@ -491,11 +489,9 @@ Validade da Proposta: 30 dias."""
             })
             st.rerun()
 
-        # LISTAGEM COM TÍTULO EM AZUL
         for i_idx, it in enumerate(st.session_state.itens):
             c_it1, c_it2, c_it3 = st.columns([4, 1, 0.5])
             with c_it1:
-                # Aqui forçamos a cor azul e o nome do profissional em destaque
                 st.markdown(f"<span style='color:#1E90FF; font-weight:bold;'>Tópico {i_idx + 1}: {it['serv']}</span>", unsafe_allow_html=True)
                 if it.get('detalhe'):
                     st.write(it['detalhe'])
@@ -526,17 +522,36 @@ Validade da Proposta: 30 dias."""
                 oid = res.data[0]['id']
                 st.session_state.edit_id = oid
 
-          st.divider()
+            # SALVA ITENS
+            for i in st.session_state.itens: 
+                supabase.table("itens_orcamento").insert({
+                    "orcamento_id": oid, 
+                    "servico": i['serv'], 
+                    "detalhamento": i.get('detalhe', ''), 
+                    "quantidade": i['qtd'], 
+                    "valor_unitario": i.get('v_unit', 0),
+                    "valor_total": i['total']
+                }).execute()
+
+            # SALVA FOTOS
+            for f in st.session_state.fotos: 
+                url_final = upload_imagem_supabase(f)
+                if url_final:
+                    supabase.table("fotos_relatorio").insert({"orcamento_id": oid, "nome_item": f['nome'], "url_foto": url_final}).execute()
+            
+            st.success("✅ Orçamento salvo com sucesso!")
+            st.rerun()
+
+    # --- ÁREA DE VISUALIZAÇÃO (FORA DO BOTÃO SALVAR) ---
+    st.divider()
     formato = st.radio("Escolha o formato:", ["Proposta Técnica Completa", "Orçamento Simples (Direto)"], horizontal=True)
 
     if formato == "Orçamento Simples (Direto)":
-        # CORREÇÃO AQUI: Adicionado loc_val e ac_val para bater com a nova definição da função
         html_final = montar_layout_simplificado_com_capa(
             st.session_state.edit_id, razao, cnpj_val, emp_val, loc_val, ac_val, 
             st.session_state.itens, st.session_state.fotos, total_proposta
         )
     else:
-        # Aqui já estava correto
         html_final = montar_layout_proposta(
             st.session_state.edit_id, razao, cnpj_val, emp_val, loc_val, ac_val, 
             escopo_final, st.session_state.itens, st.session_state.fotos, total_proposta
