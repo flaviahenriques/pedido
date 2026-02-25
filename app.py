@@ -301,7 +301,7 @@ def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, li
                 </div>
                 <div style="flex:1; border-left: 1px solid #ddd; padding-left:15px;">
                     <b style="color:#666; font-size:10px;">ENDEREÇO DO EMPREENDIMENTO:</b><br>-<br><br>
-                    <b style="color:#666; font-size:10px;">A/C:</b><br>
+                    <b style="color:#666; font-size:10px;">A/C:</b><br>-<br><br>
                 </div>
             </div>
 
