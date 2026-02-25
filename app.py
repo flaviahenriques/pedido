@@ -504,7 +504,7 @@ while len(p_esc) < 4: p_esc.append("")
 
     total_proposta = sum(i['total'] for i in st.session_state.itens)
 
-    if st.button("💾 SALVAR PROPOSTA NO SISTEMA", type="primary", use_container_width=True):
+if st.button("💾 SALVAR PROPOSTA NO SISTEMA", type="primary", use_container_width=True):
         with st.spinner("Salvando..."):
             payload = {
                 "cliente_razao_social": razao, "cliente_cnpj": cnpj_val, 
@@ -523,22 +523,26 @@ while len(p_esc) < 4: p_esc.append("")
                 oid = res.data[0]['id']
                 st.session_state.edit_id = oid
 
-            # SALVA ITENS
+            # Salva os itens novamente
             for i in st.session_state.itens: 
                 supabase.table("itens_orcamento").insert({
                     "orcamento_id": oid, 
                     "servico": i['serv'], 
                     "detalhamento": i.get('detalhe', ''), 
                     "quantidade": i['qtd'], 
-                    "valor_unitario": i.get('v_unit', 0),
+                    "valor_unitario": i.get('v_unit', 0), 
                     "valor_total": i['total']
                 }).execute()
 
-            # SALVA FOTOS
+            # Sobe as fotos e salva referências
             for f in st.session_state.fotos: 
                 url_final = upload_imagem_supabase(f)
                 if url_final:
-                    supabase.table("fotos_relatorio").insert({"orcamento_id": oid, "nome_item": f['nome'], "url_foto": url_final}).execute()
+                    supabase.table("fotos_relatorio").insert({
+                        "orcamento_id": oid, 
+                        "nome_item": f['nome'], 
+                        "url_foto": url_final
+                    }).execute()
             
             st.success("✅ Orçamento salvo com sucesso!")
             st.rerun()
