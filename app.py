@@ -450,15 +450,42 @@ Validade da Proposta: 30 dias."""
                 st.rerun()
 
         st.divider()
-        ci1, ci2, ci3 = st.columns([3, 1, 1])
-        it_n, it_q, it_v = ci1.text_input("Serviço"), ci2.number_input("Qtd", 1), ci3.number_input("R$ Unit", 0.0)
+        # --- ÁREA DE ADIÇÃO DE ITENS COM DETALHAMENTO ---
+        ci1, ci2, ci3 = st.columns([2, 1, 1])
+        with ci1:
+            it_n = st.selectbox("Profissional/Serviço", ["Ajudante", "Montador", "Eletricista", "Limpeza", "Outros"])
+        
+        # Sugestões rápidas
+        sugestoes = {
+            "Ajudante": "Atuação na movimentação de volumes, apoio na carga e descarga e suporte logístico geral.",
+            "Montador": "Montagem e desmontagem de mobiliário corporativo e estações de trabalho.",
+            "Eletricista": "Serviços de infraestrutura elétrica, revisão de fiação e pontos de energia.",
+            "Limpeza": "Execução de limpeza técnica e remoção de resíduos.",
+            "Outros": ""
+        }
+
+        it_detalhe = st.text_area("Detalhamento técnico do serviço", value=sugestoes.get(it_n, ""), height=100)
+
+        with ci2:
+            it_q = st.number_input("Qtd", min_value=1, value=1)
+        with ci3:
+            it_v = st.number_input("R$ Unit", min_value=0.0, step=10.0)
+
         if st.button("➕ Adicionar Item"): 
-            st.session_state.itens.append({"serv": it_n, "qtd": it_q, "total": it_q * it_v})
+            st.session_state.itens.append({
+                "serv": it_n, 
+                "detalhamento": it_detalhe, 
+                "qtd": it_q, 
+                "v_unit": it_v,
+                "total": it_q * it_v
+            })
             st.rerun()
             
         for i_idx, it in enumerate(st.session_state.itens):
             c_it1, c_it2, c_it3 = st.columns([4, 1, 0.5])
-            c_it1.write(f"**{it['serv']}** (x{it['qtd']})")
+            with c_it1:
+                st.markdown(f"**{it['serv']}**")
+                st.caption(it.get('detalhamento', ''))
             c_it2.write(f"R$ {it['total']:,.2f}")
             if c_it3.button("❌", key=f"del_it_{i_idx}"): 
                 st.session_state.itens.pop(i_idx)
@@ -469,11 +496,16 @@ Validade da Proposta: 30 dias."""
     if st.button("💾 SALVAR PROPOSTA NO SISTEMA", type="primary", use_container_width=True):
         with st.spinner("Salvando..."):
             payload = {
-                "cliente_razao_social": razao, "cliente_cnpj": cnpj_val, 
-                "empreendimento": emp_val, "localizacao": loc_val, 
-                "aos_cuidados": ac_val, "valor_total": total_proposta, 
-                "metodologia_escopo": escopo_final, "status": "Enviado"
+                "cliente_razao_social": razao, 
+                "cliente_cnpj": cnpj_val, 
+                "empreendimento": emp_val, 
+                "localizacao": loc_val, 
+                "aos_cuidados": ac_val, 
+                "valor_total": total_proposta, 
+                "metodologia_escopo": escopo_final, 
+                "status": "Enviado"
             }
+            
             if st.session_state.edit_id:
                 oid = st.session_state.edit_id
                 supabase.table("orcamentos").update(payload).eq("id", oid).execute()
@@ -484,12 +516,25 @@ Validade da Proposta: 30 dias."""
                 oid = res.data[0]['id']
                 st.session_state.edit_id = oid
 
+            # SALVANDO ITENS COM AS COLUNAS DO SUPABASE (detalhamento, valor_unitario)
             for i in st.session_state.itens: 
-                supabase.table("itens_orcamento").insert({"orcamento_id": oid, "servico": i['serv'], "quantidade": i['qtd'], "valor_total": i['total']}).execute()
+                supabase.table("itens_orcamento").insert({
+                    "orcamento_id": oid, 
+                    "servico": i['serv'], 
+                    "detalhamento": i.get('detalhamento', ''), 
+                    "quantidade": i['qtd'], 
+                    "valor_unitario": i.get('v_unit', 0),
+                    "valor_total": i['total']
+                }).execute()
+
             for f in st.session_state.fotos: 
                 url_final = upload_imagem_supabase(f)
                 if url_final:
-                    supabase.table("fotos_relatorio").insert({"orcamento_id": oid, "nome_item": f['nome'], "url_foto": url_final}).execute()
+                    supabase.table("fotos_relatorio").insert({
+                        "orcamento_id": oid, 
+                        "nome_item": f['nome'], 
+                        "url_foto": url_final
+                    }).execute()
             st.success("✅ Orçamento salvo com sucesso!")
 
     st.divider()
