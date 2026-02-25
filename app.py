@@ -60,7 +60,7 @@ def upload_imagem_supabase(foto_obj):
     return None
 
 # =========================================================
-# 2) DESIGN DA PROPOSTA (LAYOUTS HTML COMPLETOS)
+# 2) DESIGN DA PROPOSTA (LAYOUTS HTML COMPLETOS - REVISADO)
 # =========================================================
 
 def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados, escopo, lista_itens, lista_fotos, valor_total):
@@ -71,20 +71,29 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
     s1, s2, s3, s4 = partes[0], partes[1], partes[2], partes[3]
     num_exibicao = f"{ano_atual}-{str(id_orc).zfill(3)}" if id_orc else "PROVISÓRIO"
 
+    # Renderização de Itens (Estilo Foto: Título Azul + Qtd + Descrição)
+    itens_html = ""
+    for idx, i in enumerate(lista_itens):
+        itens_html += f"""
+        <div style="margin-top: 20px; page-break-inside: avoid;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <b style="color: #002d5b; font-size: 16px;">{idx+1}. {i.get('serv','').upper()}</b>
+                <span style="font-size: 14px; font-weight: bold;">Qtd: {i.get('qtd',1)}</span>
+            </div>
+            <div style="font-size: 12px; color: #777; margin-top: 3px;">Serviço Técnico Especializado | Local: {empreend}</div>
+            <div style="display: flex; justify-content: space-between; margin-top: 5px; border-bottom: 1px solid #f0f0f0; padding-bottom: 8px;">
+                <div style="font-size: 13px; color: #444; width: 70%;">Atuação conforme escopo técnico definido, garantindo a manutenção e preservação do patrimônio.</div>
+                <b style="font-size: 15px; color: #002d5b;">R$ {float(i.get('total',0)):,.2f}</b>
+            </div>
+        </div>
+        """
+
     fotos_html = ""
     if lista_fotos:
         fotos_html += '<b class="secao-titulo">4. RELATÓRIO FOTOGRÁFICO</b>'
         fotos_html += '<div style="display: flex; flex-wrap: wrap; gap: 2%; margin-top: 15px;">'
         for f in lista_fotos:
-            img_src = ""
-            if f.get('url_foto') and str(f['url_foto']).startswith("http"):
-                img_src = transformar_url_em_base64(f['url_foto'])
-            elif 'file' in f:
-                try:
-                    b64 = base64.b64encode(f['file'].getvalue()).decode()
-                    img_src = f"data:image/png;base64,{b64}"
-                except: img_src = ""
-            
+            img_src = transformar_url_em_base64(f.get('url_foto')) if f.get('url_foto') else ""
             if img_src:
                 fotos_html += f"""
                 <div style="width: 48%; margin-bottom:20px; page-break-inside: avoid;">
@@ -93,194 +102,102 @@ def montar_layout_proposta(id_orc, r_social, cnpj_val, empreend, local, cuidados
                 </div>"""
         fotos_html += '</div>'
 
-    itens_html = "".join([f"<div style='display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:8px 0; font-size:14px;'><span><b>{i.get('serv','').upper()}</b> (x{i.get('qtd',1)})</span><b>R$ {float(i.get('total',0)):,.2f}</b></div>" for i in lista_itens])
-
     return f"""
     <html>
     <head>
     <style>
-        body {{ font-family: 'Segoe UI', Arial, sans-serif; color: #333; margin: 0; padding: 0; }}
+        /* Força a impressão de cores de fundo (Barra Azul e Quadros) */
+        * {{ -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
+        
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; color: #333; margin: 0; padding: 40px; }}
+        
         @media print {{
             .no-print {{ display: none !important; }}
-            @page {{ size: A4; margin: 1.5cm; }}
-            .capa-container {{ margin: -1.5cm !important; height: 29.7cm; width: 21cm; page-break-after: always; }}
-            .conteudo-pagina {{ page-break-before: always; }}
+            body {{ padding: 0; }}
+            @page {{ size: A4; margin: 1.2cm; }}
         }}
-        .no-print {{ background: #002d5b; color: white; padding: 15px 30px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin: 20px; }}
-        .capa-container {{ display: flex; height: 100vh; background: white; border-left: 30px solid #002d5b; }}
-        .capa-main {{ flex: 1; padding: 80px 60px; display: flex; flex-direction: column; }}
-        .capa-titulo {{ font-size: 50px; color: #002d5b; font-weight: 900; line-height: 1; margin: 40px 0; }}
-        .capa-info {{ margin-top: 50px; font-size: 16px; line-height: 2; }}
-        .capa-label {{ color: #888; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; display: block; }}
-        .capa-valor {{ color: #333; font-size: 18px; margin-bottom: 20px; display: block; }}
-        .secao-titulo {{ color:#002d5b; font-size:14px; text-transform: uppercase; margin-top: 25px; display:block; border-bottom: 2px solid #002d5b; padding-bottom:5px; font-weight: bold; }}
+
+        .header-table {{ width: 100%; margin-bottom: 10px; }}
+        .header-info {{ text-align: right; font-size: 10px; color: #333; line-height: 1.4; }}
+        
+        .barra-titulo {{ 
+            background: #002d5b !important; color: white !important; 
+            text-align: center; padding: 12px; font-weight: bold; 
+            font-size: 18px; margin: 10px 0; border-radius: 2px; text-transform: uppercase;
+        }}
+        
+        .quadro-dados {{ 
+            display: flex; border: 1px solid #ddd; background: #f8f8f8 !important; 
+            margin-bottom: 20px; font-size: 12px;
+        }}
+        .col-dados {{ flex: 1; padding: 12px; border-right: 1px solid #ddd; }}
+        .label {{ font-weight: bold; color: #666; display: block; margin-bottom: 2px; text-transform: uppercase; font-size: 9px; }}
+        .valor {{ margin-bottom: 8px; display: block; color: #000; font-weight: 600; }}
+
+        .secao-titulo {{ color:#002d5b; font-size:14px; text-transform: uppercase; margin-top: 25px; border-bottom: 2px solid #002d5b; display: block; font-weight: bold; padding-bottom: 5px; }}
         .texto {{ text-align: justify; font-size: 13px; white-space: pre-wrap; margin: 10px 0; line-height: 1.6; color: #444; }}
-    </style>
-    </head>
-    <body>
-        <button class="no-print" onclick="window.print()">🖨️ GERAR PDF / IMPRIMIR PROPOSTA</button>
-        <div class="capa-container">
-            <div class="capa-main">
-                <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="220">
-                <h1 class="capa-titulo">PROPOSTA<br>TÉCNICA<br><small style="font-size: 25px;">COMERCIAL</small></h1>
-                <div class="capa-info">
-                    <span class="capa-label">Cliente</span>
-                    <span class="capa-valor"><b>{r_social}</b></span>
-                    <span class="capa-label">Empreendimento</span>
-                    <span class="capa-valor">{empreend}</span>
-                    <span class="capa-label">Referência</span>
-                    <span class="capa-valor">ORÇAMENTO #{num_exibicao}</span>
-                </div>
-                <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid #eee; padding-top: 20px;">
-                    <div><b style="color:#002d5b;">Rio de Janeiro</b><br>{data_hoje}</div>
-                    <div style="text-align: right;"><b>PROFIX</b><br>Gestão de Facilities</div>
-                </div>
-            </div>
-        </div>
-        <div class="conteudo-pagina" style="padding: 20px;">
-            <table style="width:100%; margin-bottom: 20px;">
-                <tr>
-                    <td><img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="180"></td>
-                    <td style="text-align:right; font-size:10px; color: #666;">
-                        <b style="color:#002d5b;">PROFIX GESTÃO DE FACILITIES</b><br>
-                        CNPJ: 52.620.102/0001-03 | Tel: 21 3609-1314<br>
-                        atendimento@profixmanutencao.com
-                    </td>
-                </tr>
-            </table>
-            <div style="background:#002d5b; color:white; text-align:center; padding:10px; font-weight:bold;">PROPOSTA TÉCNICA COMERCIAL</div>
-            <div style="border:1px solid #ddd; padding:15px; margin: 15px 0; font-size:13px; display:flex;">
-                <div style="flex:1;"><b>CLIENTE:</b> {r_social}<br><b>CNPJ:</b> {cnpj_val}</div>
-                <div style="flex:1; border-left: 1px solid #ddd; padding-left:15px;"><b>REF:</b> {num_exibicao}<br><b>A/C:</b> {cuidados}</div>
-            </div>
-            <b class="secao-titulo">1. METODOLOGIA E ESCOPO TÉCNICO</b><div class="texto">{s1}</div>
-            <b class="secao-titulo">2. MATERIAIS INCLUSOS</b><div class="texto">{s2}</div>
-            <b class="secao-titulo">3. ATENDIMENTO E SUPORTE</b><div class="texto">{s3}</div>
-            {fotos_html}
-            <div style="page-break-inside: avoid; margin-top: 30px;">
-                <b class="secao-titulo">5. INVESTIMENTO MENSAL / GLOBAL</b>
-                <div style="margin: 15px 0;">{itens_html}</div>
-                <div style="display: flex; justify-content: flex-end;">
-                    <div style="background:#f1f4f9; padding:25px; border-left:8px solid #002d5b; text-align:right; width: 300px;">
-                        <small style="color:#666;">VALOR TOTAL</small><br>
-                        <b style="font-size:28px; color:#002d5b;">R$ {valor_total:,.2f}</b>
-                    </div>
-                </div>
-                <div style="font-size:11px; color:#777; margin-top: 15px; white-space: pre-wrap;">{s4}</div>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
 
-def montar_layout_simplificado_com_capa(id_orc, r_social, cnpj_val, empreend, lista_itens, lista_fotos, valor_total):
-    data_hoje = datetime.now().strftime("%d/%m/%Y")
-    ano_atual = datetime.now().year
-    num_exibicao = f"{ano_atual}-{str(id_orc).zfill(3)}" if id_orc else "PROVISÓRIO"
-
-    itens_html = "".join([
-        f"<tr>"
-        f"<td style='padding:12px; border-bottom:1px solid #eee;'><b>{i.get('serv','').upper()}</b></td>"
-        f"<td style='padding:12px; border-bottom:1px solid #eee; text-align:center;'>{i.get('qtd',1)}</td>"
-        f"<td style='padding:12px; border-bottom:1px solid #eee; text-align:right;'><b>R$ {float(i.get('total',0)):,.2f}</b></td>"
-        f"</tr>" 
-        for i in lista_itens
-    ])
-
-    fotos_html = ""
-    if lista_fotos:
-        fotos_html = '<div style="margin-top:40px;"><b style="color:#002d5b; border-bottom:2px solid #002d5b; display:block; padding-bottom:5px;">REGISTRO FOTOGRÁFICO</b>'
-        fotos_html += '<div style="display:flex; flex-wrap:wrap; gap:15px; margin-top:15px;">'
-        for f in lista_fotos:
-            img_src = ""
-            if f.get('url_foto') and str(f['url_foto']).startswith("http"):
-                img_src = transformar_url_em_base64(f['url_foto'])
-            elif 'file' in f:
-                try:
-                    b64 = base64.b64encode(f['file'].getvalue()).decode()
-                    img_src = f"data:image/png;base64,{b64}"
-                except: img_src = ""
-            
-            if img_src:
-                fotos_html += f"""
-                <div style="width:31%; border:1px solid #ddd; border-radius:4px; padding:5px; page-break-inside: avoid;">
-                    <img src="{img_src}" style="width:100%; height:140px; object-fit:cover; border-radius:2px;">
-                    <p style="font-size:10px; text-align:center; margin:5px 0; font-weight:bold; color:#002d5b;">{f.get('nome','')}</p>
-                </div>"""
-        fotos_html += '</div></div>'
-
-    return f"""
-    <html>
-    <head>
-    <style>
-        body {{ font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; color: #333; }}
-        @media print {{
-            .no-print {{ display: none !important; }}
-            @page {{ size: A4; margin: 1.5cm; }}
-            .capa-container {{ margin: -1.5cm !important; height: 29.7cm; width: 21cm; page-break-after: always; }}
-            .conteudo-pagina {{ page-break-before: always; padding: 20px; }}
+        .total-box {{
+            background: #f1f4f9 !important; border-left: 10px solid #002d5b !important;
+            padding: 25px; text-align: right; margin-top: 30px;
+            float: right; width: 300px; page-break-inside: avoid;
         }}
-        .no-print {{ background: #002d5b; color: white; padding: 15px; border: none; border-radius: 5px; cursor: pointer; margin: 20px; font-weight: bold; }}
-        .capa-container {{ display: flex; height: 100vh; background: white; border-left: 30px solid #002d5b; }}
-        .capa-main {{ flex: 1; padding: 80px 60px; display: flex; flex-direction: column; }}
-        .capa-titulo {{ font-size: 50px; color: #002d5b; font-weight: 900; line-height: 1; margin: 40px 0; }}
-        .capa-info {{ margin-top: 50px; font-size: 16px; line-height: 2; }}
-        .capa-label {{ color: #888; text-transform: uppercase; font-size: 12px; display: block; }}
-        .capa-valor {{ color: #333; font-size: 18px; margin-bottom: 20px; display: block; }}
     </style>
     </head>
     <body>
-        <button class="no-print" onclick="window.print()">🖨️ IMPRIMIR ORÇAMENTO SIMPLES</button>
-        <div class="capa-container">
-            <div class="capa-main">
-                <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="220">
-                <h1 class="capa-titulo">ORÇAMENTO<br>DE SERVIÇOS</h1>
-                <div class="capa-info">
-                    <span class="capa-label">Cliente</span>
-                    <span class="capa-valor"><b>{r_social}</b></span>
-                    <span class="capa-label">Empreendimento</span>
-                    <span class="capa-valor">{empreend}</span>
-                    <span class="capa-label">Referência</span>
-                    <span class="capa-valor">#{num_exibicao}</span>
-                </div>
-                <div style="margin-top: auto; display: flex; justify-content: space-between; border-top: 1px solid #eee; padding-top: 20px;">
-                    <div><b>Rio de Janeiro</b><br>{data_hoje}</div>
-                    <div style="text-align: right;"><b>PROFIX</b></div>
-                </div>
+        <button class="no-print" onclick="window.print()" style="background:#002d5b; color:white; padding:15px 30px; border:none; border-radius:5px; cursor:pointer; margin-bottom:20px; font-weight:bold;">🖨️ IMPRIMIR PROPOSTA</button>
+
+        <table class="header-table">
+            <tr>
+                <td><img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="180"></td>
+                <td class="header-info">
+                    <b>PROFIX GESTÃO DE FACILITIES</b><br>
+                    CNPJ: 52.620.102/0001-03<br>
+                    Tel: (21) 3609-1314<br>
+                    Av. Marechal Câmara, 160, Sala 1107 - Centro, Rio de Janeiro - RJ
+                </td>
+            </tr>
+        </table>
+
+        <div class="barra-titulo">PROPOSTA TÉCNICA COMERCIAL</div>
+        <div style="text-align: right; font-size: 11px; margin-bottom: 10px; color: #666;">Rio de Janeiro, {data_hoje} | REF: {num_exibicao}</div>
+
+        <div class="quadro-dados">
+            <div class="col-dados">
+                <span class="label">Razão Social:</span>
+                <span class="valor">{r_social}</span>
+                <span class="label">CNPJ:</span>
+                <span class="valor">{cnpj_val}</span>
+                <span class="label">Empreendimento:</span>
+                <span class="valor">{empreend}</span>
+            </div>
+            <div class="col-dados" style="border-right: none;">
+                <span class="label">Localização:</span>
+                <span class="valor">{local if local else "—"}</span>
+                <span class="label">A/C:</span>
+                <span class="valor">{cuidados if cuidados else "À Administração"}</span>
             </div>
         </div>
-        <div class="conteudo-pagina">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
-                <img src="https://kelygcjgdbkryfqpqoqe.supabase.co/storage/v1/object/public/fotos_orcamentos/logo_profix" width="150">
-                <div style="text-align:right;">
-                    <b style="color:#002d5b; font-size:18px;">DEMONSTRATIVO DE CUSTOS</b><br>
-                    <small>Ref: {num_exibicao}</small>
-                </div>
+
+        <b class="secao-titulo">1. METODOLOGIA E ESCOPO TÉCNICO</b>
+        <div class="texto">{s1}</div>
+
+        <b class="secao-titulo">2. DETALHAMENTO DE INVESTIMENTO</b>
+        {itens_html}
+
+        {fotos_html}
+
+        <div style="page-break-inside: avoid; margin-top: 30px;">
+            <div style="float: left; width: 50%;">
+                <b style="font-size: 13px; color: #002d5b;">CONDIÇÕES GERAIS:</b>
+                <div style="font-size: 11px; color: #666; margin-top: 10px;">{s4}</div>
             </div>
-            <table style="width:100%; border-collapse:collapse; margin-top:20px;">
-                <thead>
-                    <tr style="background:#002d5b; color:white;">
-                        <th style="padding:12px; text-align:left;">DESCRIÇÃO DOS SERVIÇOS / ITENS</th>
-                        <th style="padding:12px;">QTD</th>
-                        <th style="padding:12px; text-align:right;">TOTAL</th>
-                    </tr>
-                </thead>
-                <tbody>{itens_html}</tbody>
-            </table>
-            <div style="margin-top:30px; display:flex; justify-content:flex-end;">
-                <div style="background:#f1f4f9; padding:20px; border-left:8px solid #002d5b; text-align:right; min-width:250px;">
-                    <span style="color:#666; font-size:12px;">VALOR TOTAL DO INVESTIMENTO</span><br>
-                    <b style="font-size:26px; color:#002d5b;">R$ {valor_total:,.2f}</b>
-                </div>
-            </div>
-            {fotos_html}
-            <div style="margin-top:50px; font-size:11px; color:#999; border-top:1px solid #eee; padding-top:10px;">
-                <b>NOTAS GERAIS:</b><br>
-                1. Validade desta proposta: 10 dias úteis.<br>
-                2. Impostos inclusos conforme legislação vigente.<br>
-                3. O início dos serviços está condicionado à aprovação formal deste documento.
+            <div class="total-box">
+                <span style="font-size: 12px; color: #666;">VALOR TOTAL DA PROPOSTA</span><br>
+                <span style="font-size: 28px; color: #002d5b; font-weight: 900;">R$ {valor_total:,.2f}</span>
             </div>
         </div>
+        <div style="clear: both;"></div>
     </body>
     </html>
     """
